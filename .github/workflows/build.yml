@@ -1,4 +1,4 @@
-name: Lean build
+name: Lean build 
 
 on:
   push:
