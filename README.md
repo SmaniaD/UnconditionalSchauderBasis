@@ -1,6 +1,6 @@
 # UnconditionalSchauderBasis
 
-[[oc-gen documentarion |https://smaniad.github.io/UnconditionalSchauderBasis/]]
+Doc-Gen documentation: [[https://smaniad.github.io/UnconditionalSchauderBasis/]]
 
 A Lean 4/mathlib project formalizing Schauder bases and unconditional
 Schauder bases for Banach spaces.
