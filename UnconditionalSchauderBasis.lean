@@ -13,22 +13,21 @@ open scoped BigOperators
 open scoped Topology
 
 /--
-A Schauder basis of a Banach space .
+A Schauder basis for a Banach space.
 
-The sequence `basis` is a Schauder basis when every vector `x` has a unique
-norm-convergent expansion
-`∑' n, coeff n x • basis n = x`.  The coordinate maps are bundled as
-continuous linear maps, which is the natural Banach-space formulation.
+For each vector `x`, the series `∑' n, coeff n x • basis n` converges to `x`,
+and this expansion is unique. The coordinate maps are stored as continuous
+linear maps.
 -/
 structure SchauderBasis (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
-  /-- The basis vectors. -/
+  /-- Basis vectors. -/
   basis : ℕ → E
-  /-- The continuous coordinate functionals. -/
+  /-- Continuous coordinate maps. -/
   coeff : ℕ → E →L[𝕜] 𝕜
-  /-- Every vector is the sum of its basis expansion. -/
+  /-- Every vector equals the sum of its basis expansion. -/
   hasSum_repr : ∀ x : E, HasSum (fun n : ℕ => coeff n x • basis n) x
-  /-- The coefficients in such an expansion are unique. -/
+  /-- Coefficients in this expansion are unique. -/
   unique_coeff :
     ∀ (x : E) (a : ℕ → 𝕜), HasSum (fun n : ℕ => a n • basis n) x →
       a = fun n : ℕ => coeff n x
@@ -38,7 +37,7 @@ namespace SchauderBasis
 variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
 
-/-- The `n`th coordinate of `x` with respect to a Schauder basis. -/
+/-- The `n`th coordinate of `x` in the basis `b`. -/
 def coord (b : SchauderBasis 𝕜 E) (n : ℕ) (x : E) : 𝕜 :=
   b.coeff n x
 
@@ -48,8 +47,8 @@ private theorem hasSum_repr_apply (b : SchauderBasis 𝕜 E) (x : E) :
   b.hasSum_repr x
 
 /--
-A Schauder basis is unconditional if every basis expansion converges to the
-same vector after any permutation of its terms.
+A Schauder basis is unconditional if permuting the terms of the basis series
+does not change its sum.
 -/
 def IsUnconditional (b : SchauderBasis 𝕜 E) : Prop :=
   ∀ (x : E) (σ : Equiv.Perm ℕ),
@@ -58,16 +57,16 @@ def IsUnconditional (b : SchauderBasis 𝕜 E) : Prop :=
 end SchauderBasis
 
 /--
-An unconditional Schauder basis of a Banach space.
+An unconditional Schauder basis.
 
-This bundles a Schauder basis together with the assertion that all rearranged
-basis expansions converge to the same vector.
+This is a Schauder basis together with the statement that every rearranged
+basis expansion still converges to the same vector.
 -/
 structure UnconditionalSchauderBasis (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
-  /-- The underlying Schauder basis. -/
+  /-- Underlying Schauder basis. -/
   toSchauderBasis : SchauderBasis 𝕜 E
-  /-- Unconditional convergence of every basis expansion. -/
+  /-- Every rearranged basis expansion converges to the same sum. -/
   unconditional : toSchauderBasis.IsUnconditional
 
 
@@ -81,11 +80,11 @@ variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜]
 instance : Coe (UnconditionalSchauderBasis 𝕜 E) (SchauderBasis 𝕜 E) where
   coe b := b.toSchauderBasis
 
-/-- The basis vectors of an unconditional Schauder basis. -/
+/-- Basis vectors of an unconditional Schauder basis. -/
 def basis (b : UnconditionalSchauderBasis 𝕜 E) : ℕ → E :=
   b.toSchauderBasis.basis
 
-/-- The continuous coordinate functionals of an unconditional Schauder basis. -/
+/-- Continuous coordinate maps of an unconditional Schauder basis. -/
 def coeff (b : UnconditionalSchauderBasis 𝕜 E) : ℕ → E →L[𝕜] 𝕜 :=
   b.toSchauderBasis.coeff
 
@@ -104,9 +103,11 @@ end UnconditionalSchauderBasis
 /-!
 ## From a finite sign estimate to an unconditional Schauder basis
 
-The next definitions are intended for the criterion for unconditional Schauder bases.
-They are written for Banach spaces over a nontrivially normed field of
-characteristic zero and sequences indexed by `ℕ`.
+This section proves a practical criterion for building an unconditional
+Schauder basis.
+
+We work in Banach spaces over a nontrivially normed field of characteristic
+zero, with sequences indexed by `ℕ`.
 
 Mathematically, the theorem is:
 
@@ -117,8 +118,8 @@ Mathematically, the theorem is:
 
 then `x` determines an unconditional Schauder basis.
 
-The finite-dimensional algebraic parts below are separated from the
-functional-analytic construction of the coordinate functionals.
+We separate finite-dimensional algebra from analytic arguments so each step is
+easier to follow.
 -/
 
 namespace UnconditionalCriterion
@@ -127,22 +128,22 @@ variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜] [CharZero 𝕜] [Comple
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
 
 /--
-The closed scalar linear span of the sequence `x` is all of `E`.
+The closed linear span of `x` is all of `E`.
 
-This is the correct Banach-space interpretation of "the vectors `x n` span
-`E`" when the space may be infinite-dimensional.
+In infinite-dimensional Banach spaces, this is the right meaning of
+"the vectors `x n` span `E`".
 -/
 def HasDenseSpan (x : ℕ → E) : Prop :=
   closure ((Submodule.span 𝕜 (Set.range x) : Submodule 𝕜 E) : Set E) = Set.univ
 
 /--
-Finite signed unconditionality estimate.
+Finite sign estimate.
 
-This is the Lean version of
+This is
 
 `‖∑_{i ∈ s} ε_i a_i x_i‖ ≤ C ‖∑_{i ∈ s} a_i x_i‖`,
 
-where each `ε_i` is either `1` or `-1`.
+with each `ε_i` equal to `1` or `-1`.
 -/
 def HasFiniteSignBound (x : ℕ → E) (C : ℝ) : Prop :=
   ∀ (s : Finset ℕ) (a ε : ℕ → 𝕜),
@@ -151,21 +152,21 @@ def HasFiniteSignBound (x : ℕ → E) (C : ℝ) : Prop :=
         ≤ C * ‖∑ i ∈ s, a i • x i‖
 
 /--
-A useful intermediate package: a sequence together with already constructed
-continuous coordinate maps and unconditional convergence of the expansions.
+Intermediate data package: basis vectors, coordinate maps, and convergence
+properties.
 
-This is often easier to construct first; the conversion to
-`UnconditionalSchauderBasis` is immediate.
+It is often easier to build this first and then convert it directly to
+`UnconditionalSchauderBasis`.
 -/
 private structure SchauderData (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
-  /-- The basis vectors. -/
+  /-- Basis vectors. -/
   basis : ℕ → E
-  /-- The continuous coordinate functionals. -/
+  /-- Continuous coordinate maps. -/
   coeff : ℕ → E →L[𝕜] 𝕜
-  /-- Every vector is the sum of its basis expansion. -/
+  /-- Every vector equals the sum of its basis expansion. -/
   hasSum_repr : ∀ x : E, HasSum (fun n : ℕ => coeff n x • basis n) x
-  /-- The coefficients in such an expansion are unique. -/
+  /-- Coefficients in this expansion are unique. -/
   unique_coeff :
     ∀ (x : E) (a : ℕ → 𝕜), HasSum (fun n : ℕ => a n • basis n) x →
       a = fun n : ℕ => coeff n x
@@ -174,7 +175,7 @@ private structure SchauderData (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     ∀ (x : E) (σ : Equiv.Perm ℕ),
       HasSum (fun n : ℕ => coeff (σ n) x • basis (σ n)) x
 
-/-- Convert the intermediate package into the structure used in this file. -/
+/-- Convert this intermediate package to `UnconditionalSchauderBasis`. -/
 private def SchauderData.toUnconditionalSchauderBasis
     (d : SchauderData 𝕜 E) :
     UnconditionalSchauderBasis 𝕜 E :=
@@ -190,9 +191,9 @@ private def SchauderData.toUnconditionalSchauderBasis
 }
 
 /--
-The signs equal to `1` on `t` and to `-1` outside `t`.
+Sign function equal to `1` on `t` and `-1` outside `t`.
 
-In applications this is used only on a finite set `s`, with `t ⊆ s`.
+In practice we apply it on a finite set `s` with `t ⊆ s`.
 -/
 private def projectionSigns (t : Finset ℕ) : ℕ → 𝕜 :=
   fun i => if i ∈ t then 1 else -1
@@ -219,9 +220,9 @@ private lemma projectionSigns_is_sign (s t : Finset ℕ) :
     simp [projectionSigns, hit]
 
 /--
-Algebraic identity behind the projection estimate.
+Algebraic identity used for the projection estimate.
 
-With signs `+1` on `t` and `-1` on `s \ t`, the signed sum is
+Choosing signs `+1` on `t` and `-1` on `s \ t` gives a signed sum equal to
 `2` times the projection onto `t`, minus the original sum.
 -/
 private lemma signed_sum_eq_two_projection_sub_sum
@@ -272,14 +273,12 @@ private lemma signed_sum_eq_two_projection_sub_sum
     simp [hit, neg_smul]
 
 /--
-The finite sign estimate implies uniform boundedness of all finite coordinate
+The finite sign estimate gives a uniform bound for finite coordinate
 projections.
 
-Mathematically, this is the estimate
+Concretely, for `t ⊆ s`:
 
-`‖∑ i ∈ t, a i • x i‖ ≤ ‖(2 : 𝕜)⁻¹‖ * (C + 1) * ‖∑ i ∈ s, a i • x i‖`
-
-whenever `t ⊆ s`.
+`‖∑ i ∈ t, a i • x i‖ ≤ ‖(2 : 𝕜)⁻¹‖ * (C + 1) * ‖∑ i ∈ s, a i • x i‖`.
 -/
 private lemma finite_projection_bound_of_sign_bound
     (x : ℕ → E)
@@ -327,16 +326,16 @@ private lemma finite_projection_bound_of_sign_bound
   simpa [p, y] using hmain
 
 /--
-Uniform boundedness of all finite coordinate projections for the sequence `x`.
+Uniform bound for all finite coordinate projections of `x`.
 
-The estimate is stated only on finite sums: if `t ⊆ s`, then the partial sum
-over `t` is bounded by `K` times the partial sum over `s`.
+If `t ⊆ s`, then the partial sum over `t` is at most `K` times the partial
+sum over `s`.
 -/
 private  def FiniteProjectionBound (x : ℕ → E) (K : ℝ) : Prop :=
   ∀ (s t : Finset ℕ), t ⊆ s → ∀ a : ℕ → 𝕜,
     ‖∑ i ∈ t, a i • x i‖ ≤ K * ‖∑ i ∈ s, a i • x i‖
 
-/-- The finite sign estimate gives the uniform finite projection bound. -/
+/-- The finite sign estimate implies `FiniteProjectionBound`. -/
 private  lemma finiteProjectionBound_of_signBound
     (x : ℕ → E)
     (C : ℝ)
@@ -347,12 +346,9 @@ private  lemma finiteProjectionBound_of_signBound
   exact finite_projection_bound_of_sign_bound x C hC h_sign s t hts a
 
 /--
-The singleton and finite-projection estimates imply finite linear independence
-of the sequence.
+From singleton and projection estimates, we get linear independence of `x`.
 
-This is the first genuinely algebraic construction step after the projection
-bound. It is separated so later coordinate-map construction can depend on a
-clean `LinearIndependent` hypothesis.
+This is the first purely algebraic step after the projection bound.
 -/
 private lemma linearIndependent_of_finiteProjectionBound
     (x : ℕ → E)
@@ -378,9 +374,10 @@ private lemma linearIndependent_of_finiteProjectionBound
   exact (smul_eq_zero.mp hai_smul).resolve_right (hx_ne i)
 
 /--
-The coordinate maps agree with the finite-dimensional coordinate projections:
-if `n ≤ k`, then the `n`th coordinate of a vector in
-`span {x 0, ..., x k}` is its `n`th coefficient.
+Compatibility of coordinate maps with finite expansions.
+
+For vectors written as finite sums, the `n`th coordinate map returns the
+expected coefficient.
 -/
 private def CoordMapsAgreeOnFiniteSpans
     (x : ℕ → E) (coeff : ℕ → E →L[𝕜] 𝕜) : Prop :=
@@ -388,8 +385,10 @@ private def CoordMapsAgreeOnFiniteSpans
     coeff n (∑ i ∈ s, a i • x i) = if n ∈ s then a n else 0
 
 /--
-Coordinate maps obtained from the finite-dimensional coordinates on the
-algebraic span and extended continuously to `E`.
+Existence of coordinate maps from finite projection bounds.
+
+We first define coordinates on the algebraic span, then extend continuously to
+all of `E`.
 -/
 private lemma exists_coordMaps_of_finiteProjectionBound
     (x : ℕ → E)
@@ -485,11 +484,8 @@ private lemma exists_coordMaps_of_finiteProjectionBound
     _ = if n ∈ s then a n else 0 := by simpa [r] using hl_apply_n
 
 /--
-The continuous coordinate maps associated to the finite-projection construction.
-
-The actual analytic construction is isolated in
-`exists_coordMaps_of_finiteProjectionBound`; this definition is the chosen
-coordinate family from that existence statement.
+Chosen coordinate maps produced by
+`exists_coordMaps_of_finiteProjectionBound`.
 -/
 private noncomputable def coordMaps_of_finiteProjectionBound
     (x : ℕ → E)
@@ -502,8 +498,8 @@ private noncomputable def coordMaps_of_finiteProjectionBound
     (exists_coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj)
 
 /--
-The chosen coordinate maps agree with finite-dimensional coordinate
-projections on every initial finite span.
+On each initial finite span, the chosen coordinate maps return the expected
+coefficients.
 -/
 private theorem coordMaps_of_finiteProjectionBound_apply_finite_sum
     (x : ℕ → E)
@@ -524,12 +520,11 @@ by
   simpa [Nat.lt_succ_iff, hnk] using h
 
 /--
-The finite partial-sum projections associated to the constructed coordinates
-converge strongly to the identity.
+Finite partial-sum projections from the constructed coordinates converge to the
+identity.
 
-This is the analytic core of the construction: the finite projection estimate
-gives a uniform operator bound for all finite coordinate projections, and the
-dense span hypothesis identifies the limit on a dense subspace.
+This is the analytic core: projection bounds give uniform control, and density
+identifies the limit.
 -/
 private lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
     (x : ℕ → E)
@@ -674,7 +669,7 @@ private lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
           dsimp [δ]
           field_simp [hK1_pos.ne']
 
-/-- The extended coordinate maps reconstruct every vector as a Schauder sum. -/
+/-- The extended coordinate maps reconstruct every vector as a Schauder series. -/
 private lemma coordMaps_hasSum_repr_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
@@ -689,7 +684,7 @@ private lemma coordMaps_hasSum_repr_of_finiteProjectionBound
   simpa [HasSum, SummationFilter.unconditional_filter] using
     coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound x hx_dense h_li K h_proj y
 
-/-- Coefficients in the resulting expansion are unique. -/
+/-- The coefficients in the resulting expansion are unique. -/
 private lemma coordMaps_unique_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
@@ -765,13 +760,11 @@ private noncomputable def schauderData_of_finiteProjectionBound
 }
 
 /--
-A dense sequence satisfying the finite signed unconditionality estimate should
-produce an unconditional Schauder basis.
+Build an unconditional Schauder basis from the finite sign estimate.
 
-This is the final criterion in the notation of this file. The proof is left
-as the main construction task: one has to build the continuous coordinate
-functionals from the uniformly bounded finite projections, extend them from the
-algebraic span to all of `E`, and then prove convergence and uniqueness.
+Given dense span, non-vanishing vectors, and the finite sign bound, we use the
+previous lemmas to construct coordinate maps and package everything into an
+unconditional Schauder basis.
 -/
 private  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
@@ -790,8 +783,8 @@ private  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
     (schauderData_of_finiteProjectionBound x hx_dense h_li K h_proj).toUnconditionalSchauderBasis
 
 /--
-The finite signed estimate, dense span, and non-vanishing of the vectors imply
-that `x` is the basis sequence of some unconditional Schauder basis.
+Main existence theorem: finite sign bound + dense span + `x n ≠ 0` produce an
+unconditional Schauder basis whose basis sequence is exactly `x`.
 -/
 theorem exists_unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
