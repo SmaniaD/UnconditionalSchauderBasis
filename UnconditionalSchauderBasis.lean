@@ -88,7 +88,7 @@ def coeff (b : UnconditionalSchauderBasis E) : ℕ → E →L[ℂ] ℂ :=
   b.toSchauderBasis.coeff
 
 @[simp]
-theorem hasSum_repr_apply (b : UnconditionalSchauderBasis E) (x : E) :
+private theorem hasSum_repr_apply (b : UnconditionalSchauderBasis E) (x : E) :
     HasSum (fun n : ℕ => b.coeff n x • b.basis n) x :=
   b.toSchauderBasis.hasSum_repr x
 
@@ -156,7 +156,7 @@ continuous coordinate maps and unconditional convergence of the expansions.
 This is often easier to construct first; the conversion to
 `UnconditionalSchauderBasis` is immediate.
 -/
-structure SchauderData (E : Type*) [NormedAddCommGroup E]
+private structure SchauderData (E : Type*) [NormedAddCommGroup E]
     [NormedSpace ℂ E] [CompleteSpace E] where
   /-- The basis vectors. -/
   basis : ℕ → E
@@ -174,7 +174,7 @@ structure SchauderData (E : Type*) [NormedAddCommGroup E]
       HasSum (fun n : ℕ => coeff (σ n) x • basis (σ n)) x
 
 /-- Convert the intermediate package into the structure used in this file. -/
-def SchauderData.toUnconditionalSchauderBasis
+private def SchauderData.toUnconditionalSchauderBasis
     (d : SchauderData E) :
     UnconditionalSchauderBasis E :=
 {
@@ -193,20 +193,20 @@ The signs equal to `1` on `t` and to `-1` outside `t`.
 
 In applications this is used only on a finite set `s`, with `t ⊆ s`.
 -/
-def projectionSigns (t : Finset ℕ) : ℕ → ℂ :=
+private def projectionSigns (t : Finset ℕ) : ℕ → ℂ :=
   fun i => if i ∈ t then 1 else -1
 
 @[simp]
-lemma projectionSigns_of_mem (t : Finset ℕ) {i : ℕ} (hi : i ∈ t) :
+private lemma projectionSigns_of_mem (t : Finset ℕ) {i : ℕ} (hi : i ∈ t) :
     projectionSigns t i = 1 := by
   simp [projectionSigns, hi]
 
 @[simp]
-lemma projectionSigns_of_not_mem (t : Finset ℕ) {i : ℕ} (hi : i ∉ t) :
+private lemma projectionSigns_of_not_mem (t : Finset ℕ) {i : ℕ} (hi : i ∉ t) :
     projectionSigns t i = -1 := by
   simp [projectionSigns, hi]
 
-lemma projectionSigns_is_sign (s t : Finset ℕ) :
+private lemma projectionSigns_is_sign (s t : Finset ℕ) :
     ∀ i ∈ s, projectionSigns t i = 1 ∨ projectionSigns t i = -1 := by
   intro i _hi
   by_cases hit : i ∈ t
@@ -221,7 +221,7 @@ Algebraic identity behind the projection estimate.
 With signs `+1` on `t` and `-1` on `s \ t`, the signed sum is
 `2` times the projection onto `t`, minus the original sum.
 -/
-lemma signed_sum_eq_two_projection_sub_sum
+private lemma signed_sum_eq_two_projection_sub_sum
     (x : ℕ → E)
     (s t : Finset ℕ)
     (hts : t ⊆ s)
@@ -278,7 +278,7 @@ Mathematically, this is the estimate
 
 whenever `t ⊆ s`.
 -/
-lemma finite_projection_bound_of_sign_bound
+private lemma finite_projection_bound_of_sign_bound
     (x : ℕ → E)
     (C : ℝ)
     (hC : 0 ≤ C)
@@ -351,7 +351,7 @@ This is the first genuinely algebraic construction step after the projection
 bound. It is separated so later coordinate-map construction can depend on a
 clean `LinearIndependent` hypothesis.
 -/
-lemma linearIndependent_of_finiteProjectionBound
+private lemma linearIndependent_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_ne : ∀ n, x n ≠ 0)
     (K : ℝ)
@@ -379,7 +379,7 @@ The coordinate maps agree with the finite-dimensional coordinate projections:
 if `n ≤ k`, then the `n`th coordinate of a vector in
 `span {x 0, ..., x k}` is its `n`th coefficient.
 -/
-def CoordMapsAgreeOnFiniteSpans
+private def CoordMapsAgreeOnFiniteSpans
     (x : ℕ → E) (coeff : ℕ → E →L[ℂ] ℂ) : Prop :=
   ∀ (s : Finset ℕ) (a : ℕ → ℂ) (n : ℕ),
     coeff n (∑ i ∈ s, a i • x i) = if n ∈ s then a n else 0
@@ -388,7 +388,7 @@ def CoordMapsAgreeOnFiniteSpans
 Coordinate maps obtained from the finite-dimensional coordinates on the
 algebraic span and extended continuously to `E`.
 -/
-lemma exists_coordMaps_of_finiteProjectionBound
+private lemma exists_coordMaps_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
@@ -488,7 +488,7 @@ The actual analytic construction is isolated in
 `exists_coordMaps_of_finiteProjectionBound`; this definition is the chosen
 coordinate family from that existence statement.
 -/
-noncomputable def coordMaps_of_finiteProjectionBound
+private noncomputable def coordMaps_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
@@ -502,7 +502,7 @@ noncomputable def coordMaps_of_finiteProjectionBound
 The chosen coordinate maps agree with finite-dimensional coordinate
 projections on every initial finite span.
 -/
-theorem coordMaps_of_finiteProjectionBound_apply_finite_sum
+private theorem coordMaps_of_finiteProjectionBound_apply_finite_sum
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
@@ -528,7 +528,7 @@ This is the analytic core of the construction: the finite projection estimate
 gives a uniform operator bound for all finite coordinate projections, and the
 dense span hypothesis identifies the limit on a dense subspace.
 -/
-lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
+private lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
@@ -687,7 +687,7 @@ lemma coordMaps_hasSum_repr_of_finiteProjectionBound
     coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound x hx_dense h_li K h_proj y
 
 /-- Coefficients in the resulting expansion are unique. -/
-lemma coordMaps_unique_of_finiteProjectionBound
+private lemma coordMaps_unique_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
@@ -724,7 +724,7 @@ lemma coordMaps_unique_of_finiteProjectionBound
   exact HasSum.unique hscalar hmap
 
 /-- The coordinate expansions are unconditional. -/
-lemma coordMaps_unconditional_of_finiteProjectionBound
+private lemma coordMaps_unconditional_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
@@ -743,7 +743,7 @@ lemma coordMaps_unconditional_of_finiteProjectionBound
   simpa [f, Function.comp_def] using (σ.hasSum_iff).2 hf
 
 /-- Package the constructed coordinates and convergence facts as `SchauderData`. -/
-noncomputable def schauderData_of_finiteProjectionBound
+private noncomputable def schauderData_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (h_li : LinearIndependent ℂ x)
