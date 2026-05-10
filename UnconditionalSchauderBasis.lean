@@ -43,7 +43,7 @@ def coord (b : SchauderBasis 𝕜 E) (n : ℕ) (x : E) : 𝕜 :=
   b.coeff n x
 
 @[simp]
-theorem hasSum_repr_apply (b : SchauderBasis 𝕜 E) (x : E) :
+private theorem hasSum_repr_apply (b : SchauderBasis 𝕜 E) (x : E) :
     HasSum (fun n : ℕ => b.coeff n x • b.basis n) x :=
   b.hasSum_repr x
 
@@ -90,11 +90,11 @@ def coeff (b : UnconditionalSchauderBasis 𝕜 E) : ℕ → E →L[𝕜] 𝕜 :=
   b.toSchauderBasis.coeff
 
 @[simp]
-theorem hasSum_repr_apply (b : UnconditionalSchauderBasis 𝕜 E) (x : E) :
+private theorem hasSum_repr_apply (b : UnconditionalSchauderBasis 𝕜 E) (x : E) :
     HasSum (fun n : ℕ => b.coeff n x • b.basis n) x :=
   b.toSchauderBasis.hasSum_repr x
 
-theorem hasSum_rearranged (b : UnconditionalSchauderBasis 𝕜 E)
+private theorem hasSum_rearranged (b : UnconditionalSchauderBasis 𝕜 E)
     (x : E) (σ : Equiv.Perm ℕ) :
     HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x :=
   b.unconditional x σ
@@ -157,7 +157,7 @@ continuous coordinate maps and unconditional convergence of the expansions.
 This is often easier to construct first; the conversion to
 `UnconditionalSchauderBasis` is immediate.
 -/
-structure SchauderData (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
+private structure SchauderData (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
   /-- The basis vectors. -/
   basis : ℕ → E
@@ -175,7 +175,7 @@ structure SchauderData (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
       HasSum (fun n : ℕ => coeff (σ n) x • basis (σ n)) x
 
 /-- Convert the intermediate package into the structure used in this file. -/
-def SchauderData.toUnconditionalSchauderBasis
+private def SchauderData.toUnconditionalSchauderBasis
     (d : SchauderData 𝕜 E) :
     UnconditionalSchauderBasis 𝕜 E :=
 {
@@ -194,11 +194,11 @@ The signs equal to `1` on `t` and to `-1` outside `t`.
 
 In applications this is used only on a finite set `s`, with `t ⊆ s`.
 -/
-def projectionSigns (t : Finset ℕ) : ℕ → 𝕜 :=
+private def projectionSigns (t : Finset ℕ) : ℕ → 𝕜 :=
   fun i => if i ∈ t then 1 else -1
 
 @[simp]
-lemma projectionSigns_of_mem (t : Finset ℕ) {i : ℕ} (hi : i ∈ t) :
+private lemma projectionSigns_of_mem (t : Finset ℕ) {i : ℕ} (hi : i ∈ t) :
     projectionSigns (𝕜 := 𝕜) t i = (1 : 𝕜) := by
   simp [projectionSigns, hi]
 
@@ -207,7 +207,7 @@ lemma projectionSigns_of_not_mem (t : Finset ℕ) {i : ℕ} (hi : i ∉ t) :
     projectionSigns (𝕜 := 𝕜) t i = (-1 : 𝕜) := by
   simp [projectionSigns, hi]
 
-lemma projectionSigns_is_sign (s t : Finset ℕ) :
+private lemma projectionSigns_is_sign (s t : Finset ℕ) :
     ∀ i ∈ s,
       projectionSigns (𝕜 := 𝕜) t i = (1 : 𝕜) ∨
         projectionSigns (𝕜 := 𝕜) t i = (-1 : 𝕜) := by
@@ -382,7 +382,7 @@ The coordinate maps agree with the finite-dimensional coordinate projections:
 if `n ≤ k`, then the `n`th coordinate of a vector in
 `span {x 0, ..., x k}` is its `n`th coefficient.
 -/
-def CoordMapsAgreeOnFiniteSpans
+private def CoordMapsAgreeOnFiniteSpans
     (x : ℕ → E) (coeff : ℕ → E →L[𝕜] 𝕜) : Prop :=
   ∀ (s : Finset ℕ) (a : ℕ → 𝕜) (n : ℕ),
     coeff n (∑ i ∈ s, a i • x i) = if n ∈ s then a n else 0
@@ -675,7 +675,7 @@ private lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
           field_simp [hK1_pos.ne']
 
 /-- The extended coordinate maps reconstruct every vector as a Schauder sum. -/
-lemma coordMaps_hasSum_repr_of_finiteProjectionBound
+private lemma coordMaps_hasSum_repr_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
     (h_li : LinearIndependent 𝕜 x)
