@@ -203,7 +203,7 @@ private lemma projectionSigns_of_mem (t : Finset ℕ) {i : ℕ} (hi : i ∈ t) :
   simp [projectionSigns, hi]
 
 @[simp]
-lemma projectionSigns_of_not_mem (t : Finset ℕ) {i : ℕ} (hi : i ∉ t) :
+private lemma projectionSigns_of_not_mem (t : Finset ℕ) {i : ℕ} (hi : i ∉ t) :
     projectionSigns (𝕜 := 𝕜) t i = (-1 : 𝕜) := by
   simp [projectionSigns, hi]
 
@@ -332,12 +332,12 @@ Uniform boundedness of all finite coordinate projections for the sequence `x`.
 The estimate is stated only on finite sums: if `t ⊆ s`, then the partial sum
 over `t` is bounded by `K` times the partial sum over `s`.
 -/
-def FiniteProjectionBound (x : ℕ → E) (K : ℝ) : Prop :=
+private  def FiniteProjectionBound (x : ℕ → E) (K : ℝ) : Prop :=
   ∀ (s t : Finset ℕ), t ⊆ s → ∀ a : ℕ → 𝕜,
     ‖∑ i ∈ t, a i • x i‖ ≤ K * ‖∑ i ∈ s, a i • x i‖
 
 /-- The finite sign estimate gives the uniform finite projection bound. -/
-lemma finiteProjectionBound_of_signBound
+private  lemma finiteProjectionBound_of_signBound
     (x : ℕ → E)
     (C : ℝ)
     (hC : 0 ≤ C)
@@ -773,7 +773,7 @@ as the main construction task: one has to build the continuous coordinate
 functionals from the uniformly bounded finite projections, extend them from the
 algebraic span to all of `E`, and then prove convergence and uniqueness.
 -/
-noncomputable def unconditionalSchauderBasis_of_finiteSignBound
+private  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
     (hx_ne : ∀ n, x n ≠ 0)
