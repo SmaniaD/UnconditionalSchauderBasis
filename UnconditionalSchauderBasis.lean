@@ -13,7 +13,7 @@ open scoped BigOperators
 open scoped Topology
 
 /--
-A Schauder basis of a Banach space.
+A Schauder basis of a Banach space .
 
 The sequence `basis` is a Schauder basis when every vector `x` has a unique
 norm-convergent expansion
