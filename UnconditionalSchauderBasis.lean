@@ -104,7 +104,7 @@ end UnconditionalSchauderBasis
 /-!
 ## From a finite sign estimate to an unconditional Schauder basis
 
-The next definitions are intended for the criterion discussed in the chat.
+The next definitions are intended for the criterion for unconditional Schauder bases.
 They are written for Banach spaces over a nontrivially normed field of
 characteristic zero and sequences indexed by `ℕ`.
 
