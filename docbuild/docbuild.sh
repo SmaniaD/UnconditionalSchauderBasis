@@ -5,12 +5,8 @@ mkdir ../docs
 cp -r .lake/build/doc/. ../docs/
 cd  ..
 git add docs
-if git diff --cached --quiet; then
-  echo "No documentation changes to commit."
-else
-  git commit -m "Update generated documentation"
-  git push
-fi
+git commit -m "Update generated documentation"
+git push
 cd docs
 python3 -m http.server
 
