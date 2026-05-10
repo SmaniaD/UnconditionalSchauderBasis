@@ -63,9 +63,10 @@ An unconditional Schauder basis of a Banach space.
 This bundles a Schauder basis together with the assertion that all rearranged
 basis expansions converge to the same vector.
 -/
-structure UnconditionalSchauderBasis (E : Type*) [NormedAddCommGroup E] [NormedSpace ℂ E] [CompleteSpace E] where
+structure UnconditionalSchauderBasis (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
   /-- The underlying Schauder basis. -/
-  toSchauderBasis : SchauderBasis ℂ E
+  toSchauderBasis : SchauderBasis 𝕜 E
   /-- Unconditional convergence of every basis expansion. -/
   unconditional : toSchauderBasis.IsUnconditional
 
@@ -74,25 +75,26 @@ structure UnconditionalSchauderBasis (E : Type*) [NormedAddCommGroup E] [NormedS
 
 namespace UnconditionalSchauderBasis
 
-variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E] [CompleteSpace E]
+variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
 
-instance : Coe (UnconditionalSchauderBasis E) (SchauderBasis ℂ E) where
+instance : Coe (UnconditionalSchauderBasis 𝕜 E) (SchauderBasis 𝕜 E) where
   coe b := b.toSchauderBasis
 
 /-- The basis vectors of an unconditional Schauder basis. -/
-def basis (b : UnconditionalSchauderBasis E) : ℕ → E :=
+def basis (b : UnconditionalSchauderBasis 𝕜 E) : ℕ → E :=
   b.toSchauderBasis.basis
 
 /-- The continuous coordinate functionals of an unconditional Schauder basis. -/
-def coeff (b : UnconditionalSchauderBasis E) : ℕ → E →L[ℂ] ℂ :=
+def coeff (b : UnconditionalSchauderBasis 𝕜 E) : ℕ → E →L[𝕜] 𝕜 :=
   b.toSchauderBasis.coeff
 
 @[simp]
-theorem hasSum_repr_apply (b : UnconditionalSchauderBasis E) (x : E) :
+theorem hasSum_repr_apply (b : UnconditionalSchauderBasis 𝕜 E) (x : E) :
     HasSum (fun n : ℕ => b.coeff n x • b.basis n) x :=
   b.toSchauderBasis.hasSum_repr x
 
-theorem hasSum_rearranged (b : UnconditionalSchauderBasis E)
+theorem hasSum_rearranged (b : UnconditionalSchauderBasis 𝕜 E)
     (x : E) (σ : Equiv.Perm ℕ) :
     HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x :=
   b.unconditional x σ
@@ -103,8 +105,8 @@ end UnconditionalSchauderBasis
 ## From a finite sign estimate to an unconditional Schauder basis
 
 The next definitions are intended for the criterion discussed in the chat.
-They are written in the notation of this file, namely for complex Banach
-spaces and sequences indexed by `ℕ`.
+They are written for Banach spaces over a nontrivially normed field of
+characteristic zero and sequences indexed by `ℕ`.
 
 Mathematically, the theorem is:
 
@@ -115,24 +117,23 @@ Mathematically, the theorem is:
 
 then `x` determines an unconditional Schauder basis.
 
-The finite-dimensional algebraic parts below have been separated from the
-functional-analytic construction of the coordinate functionals. The latter is
-left as the main `sorry`, because it requires building continuous coordinate
-maps on the algebraic span and extending them by density.
+The finite-dimensional algebraic parts below are separated from the
+functional-analytic construction of the coordinate functionals.
 -/
 
 namespace UnconditionalCriterion
 
-variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℂ E] [CompleteSpace E]
+variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜] [CharZero 𝕜] [CompleteSpace 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
 
 /--
-The closed complex linear span of the sequence `x` is all of `E`.
+The closed scalar linear span of the sequence `x` is all of `E`.
 
 This is the correct Banach-space interpretation of "the vectors `x n` span
 `E`" when the space may be infinite-dimensional.
 -/
 def HasDenseSpan (x : ℕ → E) : Prop :=
-  closure ((Submodule.span ℂ (Set.range x) : Submodule ℂ E) : Set E) = Set.univ
+  closure ((Submodule.span 𝕜 (Set.range x) : Submodule 𝕜 E) : Set E) = Set.univ
 
 /--
 Finite signed unconditionality estimate.
@@ -144,7 +145,7 @@ This is the Lean version of
 where each `ε_i` is either `1` or `-1`.
 -/
 def HasFiniteSignBound (x : ℕ → E) (C : ℝ) : Prop :=
-  ∀ (s : Finset ℕ) (a ε : ℕ → ℂ),
+  ∀ (s : Finset ℕ) (a ε : ℕ → 𝕜),
     (∀ i ∈ s, ε i = 1 ∨ ε i = -1) →
       ‖∑ i ∈ s, (ε i * a i) • x i‖
         ≤ C * ‖∑ i ∈ s, a i • x i‖
@@ -156,17 +157,17 @@ continuous coordinate maps and unconditional convergence of the expansions.
 This is often easier to construct first; the conversion to
 `UnconditionalSchauderBasis` is immediate.
 -/
-structure SchauderData (E : Type*) [NormedAddCommGroup E]
-    [NormedSpace ℂ E] [CompleteSpace E] where
+structure SchauderData (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
   /-- The basis vectors. -/
   basis : ℕ → E
   /-- The continuous coordinate functionals. -/
-  coeff : ℕ → E →L[ℂ] ℂ
+  coeff : ℕ → E →L[𝕜] 𝕜
   /-- Every vector is the sum of its basis expansion. -/
   hasSum_repr : ∀ x : E, HasSum (fun n : ℕ => coeff n x • basis n) x
   /-- The coefficients in such an expansion are unique. -/
   unique_coeff :
-    ∀ (x : E) (a : ℕ → ℂ), HasSum (fun n : ℕ => a n • basis n) x →
+    ∀ (x : E) (a : ℕ → 𝕜), HasSum (fun n : ℕ => a n • basis n) x →
       a = fun n : ℕ => coeff n x
   /-- Every rearranged basis expansion has the same sum. -/
   unconditional :
@@ -175,8 +176,8 @@ structure SchauderData (E : Type*) [NormedAddCommGroup E]
 
 /-- Convert the intermediate package into the structure used in this file. -/
 def SchauderData.toUnconditionalSchauderBasis
-    (d : SchauderData E) :
-    UnconditionalSchauderBasis E :=
+    (d : SchauderData 𝕜 E) :
+    UnconditionalSchauderBasis 𝕜 E :=
 {
   toSchauderBasis :=
   {
@@ -193,21 +194,23 @@ The signs equal to `1` on `t` and to `-1` outside `t`.
 
 In applications this is used only on a finite set `s`, with `t ⊆ s`.
 -/
-def projectionSigns (t : Finset ℕ) : ℕ → ℂ :=
+def projectionSigns (t : Finset ℕ) : ℕ → 𝕜 :=
   fun i => if i ∈ t then 1 else -1
 
 @[simp]
 lemma projectionSigns_of_mem (t : Finset ℕ) {i : ℕ} (hi : i ∈ t) :
-    projectionSigns t i = 1 := by
+    projectionSigns (𝕜 := 𝕜) t i = (1 : 𝕜) := by
   simp [projectionSigns, hi]
 
 @[simp]
 lemma projectionSigns_of_not_mem (t : Finset ℕ) {i : ℕ} (hi : i ∉ t) :
-    projectionSigns t i = -1 := by
+    projectionSigns (𝕜 := 𝕜) t i = (-1 : 𝕜) := by
   simp [projectionSigns, hi]
 
 lemma projectionSigns_is_sign (s t : Finset ℕ) :
-    ∀ i ∈ s, projectionSigns t i = 1 ∨ projectionSigns t i = -1 := by
+    ∀ i ∈ s,
+      projectionSigns (𝕜 := 𝕜) t i = (1 : 𝕜) ∨
+        projectionSigns (𝕜 := 𝕜) t i = (-1 : 𝕜) := by
   intro i _hi
   by_cases hit : i ∈ t
   · left
@@ -225,33 +228,33 @@ lemma signed_sum_eq_two_projection_sub_sum
     (x : ℕ → E)
     (s t : Finset ℕ)
     (hts : t ⊆ s)
-    (a : ℕ → ℂ) :
-    (∑ i ∈ s, (projectionSigns t i * a i) • x i)
+    (a : ℕ → 𝕜) :
+    (∑ i ∈ s, (projectionSigns (𝕜 := 𝕜) t i * a i) • x i)
       =
-    (2 : ℂ) • (∑ i ∈ t, a i • x i)
+    (2 : 𝕜) • (∑ i ∈ t, a i • x i)
       -
     (∑ i ∈ s, a i • x i) := by
   classical
   have hproj :
-      (∑ i ∈ s, (((if i ∈ t then (2 : ℂ) else 0) * a i) • x i))
-        = (2 : ℂ) • (∑ i ∈ t, a i • x i) := by
+      (∑ i ∈ s, (((if i ∈ t then (2 : 𝕜) else 0) * a i) • x i))
+        = (2 : 𝕜) • (∑ i ∈ t, a i • x i) := by
     calc
-      (∑ i ∈ s, (((if i ∈ t then (2 : ℂ) else 0) * a i) • x i))
-          = ∑ i ∈ t, (((if i ∈ t then (2 : ℂ) else 0) * a i) • x i) := by
+      (∑ i ∈ s, (((if i ∈ t then (2 : 𝕜) else 0) * a i) • x i))
+          = ∑ i ∈ t, (((if i ∈ t then (2 : 𝕜) else 0) * a i) • x i) := by
             exact (Finset.sum_subset
               (s₁ := t) (s₂ := s)
-              (f := fun i => (((if i ∈ t then (2 : ℂ) else 0) * a i) • x i))
+              (f := fun i => (((if i ∈ t then (2 : 𝕜) else 0) * a i) • x i))
               hts (by
                 intro i _his hit
                 simp [hit])).symm
-      _ = ∑ i ∈ t, ((2 : ℂ) * a i) • x i := by
+      _ = ∑ i ∈ t, ((2 : 𝕜) * a i) • x i := by
             refine Finset.sum_congr rfl ?_
             intro i hi
             simp [hi]
-      _ = (2 : ℂ) • (∑ i ∈ t, a i • x i) := by
+      _ = (2 : 𝕜) • (∑ i ∈ t, a i • x i) := by
             rw [Finset.smul_sum]
-            change (∑ i ∈ t, ((2 : ℂ) * a i) • x i)
-              = ∑ i ∈ t, (2 : ℂ) • (a i • x i)
+            change (∑ i ∈ t, ((2 : 𝕜) * a i) • x i)
+              = ∑ i ∈ t, (2 : 𝕜) • (a i • x i)
             refine Finset.sum_congr rfl ?_
             intro i _hi
             rw [mul_smul]
@@ -259,13 +262,13 @@ lemma signed_sum_eq_two_projection_sub_sum
   refine Finset.sum_congr rfl ?_
   intro i _hi
   by_cases hit : i ∈ t
-  · rw [projectionSigns_of_mem t hit]
+  · rw [projectionSigns_of_mem (𝕜 := 𝕜) t hit]
     simp only [one_mul]
     rw [← sub_smul]
     congr 1
     simp [hit]
     ring
-  · rw [projectionSigns_of_not_mem t hit]
+  · rw [projectionSigns_of_not_mem (𝕜 := 𝕜) t hit]
     simp [hit, neg_smul]
 
 /--
@@ -274,7 +277,7 @@ projections.
 
 Mathematically, this is the estimate
 
-`‖∑ i ∈ t, a i • x i‖ ≤ ((C + 1) / 2) * ‖∑ i ∈ s, a i • x i‖`
+`‖∑ i ∈ t, a i • x i‖ ≤ ‖(2 : 𝕜)⁻¹‖ * (C + 1) * ‖∑ i ∈ s, a i • x i‖`
 
 whenever `t ⊆ s`.
 -/
@@ -282,45 +285,45 @@ lemma finite_projection_bound_of_sign_bound
     (x : ℕ → E)
     (C : ℝ)
     (hC : 0 ≤ C)
-    (h_sign : HasFiniteSignBound x C)
+    (h_sign : HasFiniteSignBound (𝕜 := 𝕜) x C)
     (s t : Finset ℕ)
     (hts : t ⊆ s)
-    (a : ℕ → ℂ) :
+    (a : ℕ → 𝕜) :
     ‖∑ i ∈ t, a i • x i‖
-      ≤ ((C + 1) / 2) * ‖∑ i ∈ s, a i • x i‖ := by
+      ≤ (‖((2 : 𝕜)⁻¹)‖ * (C + 1)) * ‖∑ i ∈ s, a i • x i‖ := by
   classical
   have _hC_plus_one : 0 ≤ C + 1 := add_nonneg hC zero_le_one
   let p : E := ∑ i ∈ t, a i • x i
   let y : E := ∑ i ∈ s, a i • x i
-  let z : E := ∑ i ∈ s, (projectionSigns t i * a i) • x i
+  let z : E := ∑ i ∈ s, (projectionSigns (𝕜 := 𝕜) t i * a i) • x i
   have hz_bound : ‖z‖ ≤ C * ‖y‖ := by
-    simpa [z, y] using h_sign s a (projectionSigns t) (projectionSigns_is_sign s t)
-  have hz_eq : z = (2 : ℂ) • p - y := by
+    simpa [z, y] using
+      h_sign s a (projectionSigns (𝕜 := 𝕜) t)
+        (projectionSigns_is_sign (𝕜 := 𝕜) s t)
+  have hz_eq : z = (2 : 𝕜) • p - y := by
     simpa [z, p, y] using signed_sum_eq_two_projection_sub_sum x s t hts a
-  have hp_eq : p = ((2 : ℂ)⁻¹) • (z + y) := by
+  have hp_eq : p = ((2 : 𝕜)⁻¹) • (z + y) := by
     rw [hz_eq]
-    simp [p, sub_add_cancel]
-  have hhalf : ‖((2 : ℂ)⁻¹)‖ = (1 / 2 : ℝ) := by
-    norm_num [Complex.normSq, Complex.normSq_apply]
+    simp [p]
   have hnorm :
-      ‖p‖ ≤ (1 / 2 : ℝ) * (‖z‖ + ‖y‖) := by
+      ‖p‖ ≤ ‖((2 : 𝕜)⁻¹)‖ * (‖z‖ + ‖y‖) := by
     calc
-      ‖p‖ = ‖((2 : ℂ)⁻¹) • (z + y)‖ := by rw [hp_eq]
-      _ = (1 / 2 : ℝ) * ‖z + y‖ := by
-            rw [norm_smul, hhalf]
-      _ ≤ (1 / 2 : ℝ) * (‖z‖ + ‖y‖) := by
-            exact mul_le_mul_of_nonneg_left (norm_add_le z y) (by norm_num)
+      ‖p‖ = ‖((2 : 𝕜)⁻¹) • (z + y)‖ := by rw [hp_eq]
+      _ = ‖((2 : 𝕜)⁻¹)‖ * ‖z + y‖ := by
+            rw [norm_smul]
+      _ ≤ ‖((2 : 𝕜)⁻¹)‖ * (‖z‖ + ‖y‖) := by
+            exact mul_le_mul_of_nonneg_left (norm_add_le z y) (norm_nonneg _)
   have hzy : ‖z‖ + ‖y‖ ≤ (C + 1) * ‖y‖ := by
     calc
       ‖z‖ + ‖y‖ ≤ C * ‖y‖ + ‖y‖ := by
         exact add_le_add hz_bound le_rfl
       _ = (C + 1) * ‖y‖ := by ring
-  have hmain : ‖p‖ ≤ ((C + 1) / 2) * ‖y‖ := by
+  have hmain : ‖p‖ ≤ (‖((2 : 𝕜)⁻¹)‖ * (C + 1)) * ‖y‖ := by
     calc
-      ‖p‖ ≤ (1 / 2 : ℝ) * (‖z‖ + ‖y‖) := hnorm
-      _ ≤ (1 / 2 : ℝ) * ((C + 1) * ‖y‖) := by
-            exact mul_le_mul_of_nonneg_left hzy (by norm_num)
-      _ = ((C + 1) / 2) * ‖y‖ := by ring
+      ‖p‖ ≤ ‖((2 : 𝕜)⁻¹)‖ * (‖z‖ + ‖y‖) := hnorm
+      _ ≤ ‖((2 : 𝕜)⁻¹)‖ * ((C + 1) * ‖y‖) := by
+            exact mul_le_mul_of_nonneg_left hzy (norm_nonneg _)
+      _ = (‖((2 : 𝕜)⁻¹)‖ * (C + 1)) * ‖y‖ := by ring
   simpa [p, y] using hmain
 
 /--
@@ -330,7 +333,7 @@ The estimate is stated only on finite sums: if `t ⊆ s`, then the partial sum
 over `t` is bounded by `K` times the partial sum over `s`.
 -/
 def FiniteProjectionBound (x : ℕ → E) (K : ℝ) : Prop :=
-  ∀ (s t : Finset ℕ), t ⊆ s → ∀ a : ℕ → ℂ,
+  ∀ (s t : Finset ℕ), t ⊆ s → ∀ a : ℕ → 𝕜,
     ‖∑ i ∈ t, a i • x i‖ ≤ K * ‖∑ i ∈ s, a i • x i‖
 
 /-- The finite sign estimate gives the uniform finite projection bound. -/
@@ -338,8 +341,8 @@ lemma finiteProjectionBound_of_signBound
     (x : ℕ → E)
     (C : ℝ)
     (hC : 0 ≤ C)
-    (h_sign : HasFiniteSignBound x C) :
-    FiniteProjectionBound x ((C + 1) / 2) := by
+    (h_sign : HasFiniteSignBound (𝕜 := 𝕜) x C) :
+    FiniteProjectionBound (𝕜 := 𝕜) x (‖((2 : 𝕜)⁻¹)‖ * (C + 1)) := by
   intro s t hts a
   exact finite_projection_bound_of_sign_bound x C hC h_sign s t hts a
 
@@ -355,8 +358,8 @@ lemma linearIndependent_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_ne : ∀ n, x n ≠ 0)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K) :
-    LinearIndependent ℂ x := by
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K) :
+    LinearIndependent 𝕜 x := by
   classical
   rw [linearIndependent_iff']
   intro s a hsum i hi
@@ -380,8 +383,8 @@ if `n ≤ k`, then the `n`th coordinate of a vector in
 `span {x 0, ..., x k}` is its `n`th coefficient.
 -/
 def CoordMapsAgreeOnFiniteSpans
-    (x : ℕ → E) (coeff : ℕ → E →L[ℂ] ℂ) : Prop :=
-  ∀ (s : Finset ℕ) (a : ℕ → ℂ) (n : ℕ),
+    (x : ℕ → E) (coeff : ℕ → E →L[𝕜] 𝕜) : Prop :=
+  ∀ (s : Finset ℕ) (a : ℕ → 𝕜) (n : ℕ),
     coeff n (∑ i ∈ s, a i • x i) = if n ∈ s then a n else 0
 
 /--
@@ -390,16 +393,16 @@ algebraic span and extended continuously to `E`.
 -/
 lemma exists_coordMaps_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K) :
-    ∃ coeff : ℕ → E →L[ℂ] ℂ, CoordMapsAgreeOnFiniteSpans x coeff := by
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K) :
+    ∃ coeff : ℕ → E →L[𝕜] 𝕜, CoordMapsAgreeOnFiniteSpans (𝕜 := 𝕜) x coeff := by
   classical
-  let S : Submodule ℂ E := Submodule.span ℂ (Set.range x)
-  let e : S →ₗ[ℂ] E := Submodule.subtype S
-  let coordLin : ℕ → S →ₗ[ℂ] ℂ :=
-    fun n => (Finsupp.lapply n : (ℕ →₀ ℂ) →ₗ[ℂ] ℂ).comp h_li.repr
+  let S : Submodule 𝕜 E := Submodule.span 𝕜 (Set.range x)
+  let e : S →ₗ[𝕜] E := Submodule.subtype S
+  let coordLin : ℕ → S →ₗ[𝕜] 𝕜 :=
+    fun n => (Finsupp.lapply n : (ℕ →₀ 𝕜) →ₗ[𝕜] 𝕜).comp h_li.repr
   have h_dense : DenseRange e := by
     rw [denseRange_iff_closure_range]
     simpa [HasDenseSpan, S, e, LinearMap.range_eq_map, Submodule.range_subtype] using hx_dense
@@ -407,14 +410,14 @@ lemma exists_coordMaps_of_finiteProjectionBound
     intro n
     refine ⟨K / ‖x n‖, ?_⟩
     intro y
-    let c : ℕ →₀ ℂ := h_li.repr y
+    let c : ℕ →₀ 𝕜 := h_li.repr y
     have hxpos : 0 < ‖x n‖ := norm_pos_iff.mpr (h_li.ne_zero n)
     have hK_nonneg : 0 ≤ K := by
       have hself :
-          ‖∑ j ∈ ({n} : Finset ℕ), (if j = n then (1 : ℂ) else 0) • x j‖
-            ≤ K * ‖∑ j ∈ ({n} : Finset ℕ), (if j = n then (1 : ℂ) else 0) • x j‖ :=
+          ‖∑ j ∈ ({n} : Finset ℕ), (if j = n then (1 : 𝕜) else 0) • x j‖
+            ≤ K * ‖∑ j ∈ ({n} : Finset ℕ), (if j = n then (1 : 𝕜) else 0) • x j‖ :=
         h_proj ({n} : Finset ℕ) ({n} : Finset ℕ) (by intro j hj; simpa using hj)
-          (fun j => if j = n then (1 : ℂ) else 0)
+          (fun j => if j = n then (1 : 𝕜) else 0)
       have hself' : ‖x n‖ ≤ K * ‖x n‖ := by
         simpa using hself
       have hright_nonneg : 0 ≤ K * ‖x n‖ :=
@@ -448,7 +451,7 @@ lemma exists_coordMaps_of_finiteProjectionBound
         _ = (K / ‖x n‖) * ‖e y‖ := by
           simp [e]
           ring
-  let coeff : ℕ → E →L[ℂ] ℂ := fun n => (coordLin n).extendOfNorm e
+  let coeff : ℕ → E →L[𝕜] 𝕜 := fun n => (coordLin n).extendOfNorm e
   refine ⟨coeff, ?_⟩
   intro s a n
   let r : Finset ℕ := s
@@ -461,15 +464,15 @@ lemma exists_coordMaps_of_finiteProjectionBound
       coeff n (∑ i ∈ r, a i • x i) = coordLin n y := by
     rw [← hy]
     exact LinearMap.extendOfNorm_eq h_dense (h_norm n) y
-  let ftrunc : ℕ → ℂ := fun i => if i ∈ r then a i else 0
+  let ftrunc : ℕ → 𝕜 := fun i => if i ∈ r then a i else 0
   have hftrunc : ∀ i, ftrunc i ≠ 0 → i ∈ r := by
       intro i hi
       by_contra hir
       simp [ftrunc, hir] at hi
-  let l : ℕ →₀ ℂ := Finsupp.onFinset r ftrunc hftrunc
+  let l : ℕ →₀ 𝕜 := Finsupp.onFinset r ftrunc hftrunc
   have hl_apply_n : l n = if n ∈ r then a n else 0 := by
     by_cases hnmem : n ∈ r <;> simp [l, ftrunc, hnmem]
-  have hl_lc : Finsupp.linearCombination ℂ x l = (y : E) := by
+  have hl_lc : Finsupp.linearCombination 𝕜 x l = (y : E) := by
     rw [show l = Finsupp.onFinset r ftrunc hftrunc by rfl]
     rw [Finsupp.linearCombination_onFinset]
     simp [ftrunc, y]
@@ -490,11 +493,11 @@ coordinate family from that existence statement.
 -/
 noncomputable def coordMaps_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K) :
-    ℕ → E →L[ℂ] ℂ :=
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K) :
+    ℕ → E →L[𝕜] 𝕜 :=
   Classical.choose
     (exists_coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj)
 
@@ -504,13 +507,13 @@ projections on every initial finite span.
 -/
 theorem coordMaps_of_finiteProjectionBound_apply_finite_sum
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K)
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K)
     (n k : ℕ)
     (hnk : n ≤ k)
-    (a : ℕ → ℂ) :
+    (a : ℕ → 𝕜) :
     coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj n
       (∑ i ∈ Finset.range (k + 1), a i • x i) = a n :=
 by
@@ -530,10 +533,10 @@ dense span hypothesis identifies the limit on a dense subspace.
 -/
 lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K)
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K)
     (y : E) :
     Filter.Tendsto
       (fun s : Finset ℕ =>
@@ -543,17 +546,17 @@ lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
   classical
   let coeff := coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj
   let P : Finset ℕ → E → E := fun s y => ∑ n ∈ s, coeff n y • x n
-  let S : Submodule ℂ E := Submodule.span ℂ (Set.range x)
-  let e : S →ₗ[ℂ] E := Submodule.subtype S
+  let S : Submodule 𝕜 E := Submodule.span 𝕜 (Set.range x)
+  let e : S →ₗ[𝕜] E := Submodule.subtype S
   have h_dense : DenseRange e := by
     rw [denseRange_iff_closure_range]
     simpa [HasDenseSpan, S, e, LinearMap.range_eq_map, Submodule.range_subtype] using hx_dense
   have hK_nonneg : 0 ≤ K := by
     have hself :
-        ‖∑ j ∈ ({0} : Finset ℕ), (if j = 0 then (1 : ℂ) else 0) • x j‖
-          ≤ K * ‖∑ j ∈ ({0} : Finset ℕ), (if j = 0 then (1 : ℂ) else 0) • x j‖ :=
+        ‖∑ j ∈ ({0} : Finset ℕ), (if j = 0 then (1 : 𝕜) else 0) • x j‖
+          ≤ K * ‖∑ j ∈ ({0} : Finset ℕ), (if j = 0 then (1 : 𝕜) else 0) • x j‖ :=
       h_proj ({0} : Finset ℕ) ({0} : Finset ℕ) (by intro j hj; simpa using hj)
-        (fun j => if j = 0 then (1 : ℂ) else 0)
+        (fun j => if j = 0 then (1 : 𝕜) else 0)
     have hself' : ‖x 0‖ ≤ K * ‖x 0‖ := by
       simpa using hself
     have hxpos : 0 < ‖x 0‖ := norm_pos_iff.mpr (h_li.ne_zero 0)
@@ -564,7 +567,7 @@ lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
       ∀ (s : Finset ℕ) (z : S),
         (h_li.repr z).support ⊆ s → P s (z : E) = (z : E) := by
     intro s z hzs
-    let c : ℕ →₀ ℂ := h_li.repr z
+    let c : ℕ →₀ 𝕜 := h_li.repr z
     have hzsum : ∑ n ∈ c.support, c n • x n = (z : E) := by
       simpa [c, Finsupp.linearCombination_apply] using h_li.linearCombination_repr z
     have hcoord : ∀ n, coeff n (z : E) = if n ∈ c.support then c n else 0 := by
@@ -596,7 +599,7 @@ lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
   have hP_span_bound :
       ∀ (s : Finset ℕ) (z : S), ‖P s (z : E)‖ ≤ K * ‖(z : E)‖ := by
     intro s z
-    let c : ℕ →₀ ℂ := h_li.repr z
+    let c : ℕ →₀ 𝕜 := h_li.repr z
     have hzsum : ∑ n ∈ c.support, c n • x n = (z : E) := by
       simpa [c, Finsupp.linearCombination_apply] using h_li.linearCombination_repr z
     have hcoord : ∀ n, coeff n (z : E) = if n ∈ c.support then c n else 0 := by
@@ -644,7 +647,7 @@ lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
   let δ : ℝ := ε / (K + 1)
   have hδ_pos : 0 < δ := div_pos hε hK1_pos
   obtain ⟨z, hzdist⟩ := h_dense.exists_dist_lt y hδ_pos
-  let c : ℕ →₀ ℂ := h_li.repr z
+  let c : ℕ →₀ 𝕜 := h_li.repr z
   refine ⟨c.support, ?_⟩
   intro s hs
   have hPz : P s (z : E) = (z : E) :=
@@ -674,10 +677,10 @@ lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
 /-- The extended coordinate maps reconstruct every vector as a Schauder sum. -/
 lemma coordMaps_hasSum_repr_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K)
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K)
     (y : E) :
     HasSum
       (fun n : ℕ =>
@@ -689,11 +692,11 @@ lemma coordMaps_hasSum_repr_of_finiteProjectionBound
 /-- Coefficients in the resulting expansion are unique. -/
 lemma coordMaps_unique_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K) :
-    ∀ (y : E) (a : ℕ → ℂ),
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K) :
+    ∀ (y : E) (a : ℕ → 𝕜),
       HasSum (fun n : ℕ => a n • x n) y →
         a = fun n : ℕ =>
           coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj n y := by
@@ -726,10 +729,10 @@ lemma coordMaps_unique_of_finiteProjectionBound
 /-- The coordinate expansions are unconditional. -/
 lemma coordMaps_unconditional_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K) :
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K) :
     ∀ (y : E) (σ : Equiv.Perm ℕ),
       HasSum
         (fun n : ℕ =>
@@ -745,11 +748,11 @@ lemma coordMaps_unconditional_of_finiteProjectionBound
 /-- Package the constructed coordinates and convergence facts as `SchauderData`. -/
 noncomputable def schauderData_of_finiteProjectionBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
-    (h_li : LinearIndependent ℂ x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
+    (h_li : LinearIndependent 𝕜 x)
     (K : ℝ)
-    (h_proj : FiniteProjectionBound x K) :
-    SchauderData E :=
+    (h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K) :
+    SchauderData 𝕜 E :=
 {
   basis := x
   coeff := coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj
@@ -770,18 +773,18 @@ as the main construction task: one has to build the continuous coordinate
 functionals from the uniformly bounded finite projections, extend them from the
 algebraic span to all of `E`, and then prove convergence and uniqueness.
 -/
-  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
+noncomputable def unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
     (hx_ne : ∀ n, x n ≠ 0)
     (C : ℝ)
     (hC : 0 ≤ C)
-    (h_sign : HasFiniteSignBound x C) :
-    UnconditionalSchauderBasis E := by
-  let K : ℝ := (C + 1) / 2
-  have h_proj : FiniteProjectionBound x K :=
+    (h_sign : HasFiniteSignBound (𝕜 := 𝕜) x C) :
+    UnconditionalSchauderBasis 𝕜 E := by
+  let K : ℝ := ‖((2 : 𝕜)⁻¹)‖ * (C + 1)
+  have h_proj : FiniteProjectionBound (𝕜 := 𝕜) x K :=
     finiteProjectionBound_of_signBound x C hC h_sign
-  have h_li : LinearIndependent ℂ x :=
+  have h_li : LinearIndependent 𝕜 x :=
     linearIndependent_of_finiteProjectionBound x hx_ne K h_proj
   exact
     (schauderData_of_finiteProjectionBound x hx_dense h_li K h_proj).toUnconditionalSchauderBasis
@@ -792,12 +795,12 @@ that `x` is the basis sequence of some unconditional Schauder basis.
 -/
 theorem exists_unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
-    (hx_dense : HasDenseSpan x)
+    (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
     (hx_ne : ∀ n, x n ≠ 0)
     (C : ℝ)
     (hC : 0 ≤ C)
-    (h_sign : HasFiniteSignBound x C) :
-    ∃ b : UnconditionalSchauderBasis E, b.basis = x := by
+    (h_sign : HasFiniteSignBound (𝕜 := 𝕜) x C) :
+    ∃ b : UnconditionalSchauderBasis 𝕜 E, b.basis = x := by
   refine ⟨unconditionalSchauderBasis_of_finiteSignBound x hx_dense hx_ne C hC h_sign, ?_⟩
   rfl
 
