@@ -770,7 +770,7 @@ as the main construction task: one has to build the continuous coordinate
 functionals from the uniformly bounded finite projections, extend them from the
 algebraic span to all of `E`, and then prove convergence and uniqueness.
 -/
-noncomputable def unconditionalSchauderBasis_of_finiteSignBound
+  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
     (hx_ne : ∀ n, x n ≠ 0)
