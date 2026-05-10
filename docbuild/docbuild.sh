@@ -3,7 +3,8 @@ set -e
 
 # raiz do repositório Lean
 LEAN_ROOT="$(pwd)"
-
+ 
+lake clean
 MATHLIB_NO_CACHE_ON_UPDATE=1 lake update doc-gen
 lake build UnconditionalSchauderBasis:docs
 
