@@ -3,6 +3,9 @@ version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["UnconditionalSchauderBasis"]
 
+releaseRepo = "https://github.com/SmaniaD/UnconditionalSchauderBasis"
+preferReleaseBuild = true
+
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
 autoImplicit = false
