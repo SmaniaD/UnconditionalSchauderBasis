@@ -116,9 +116,7 @@ Mathematically, the theorem is:
 then `x` determines an unconditional Schauder basis.
 
 The finite-dimensional algebraic parts below have been separated from the
-functional-analytic construction of the coordinate functionals. The latter is
-left as the main `sorry`, because it requires building continuous coordinate
-maps on the algebraic span and extending them by density.
+functional-analytic construction of the coordinate functionals.
 -/
 
 namespace UnconditionalCriterion
