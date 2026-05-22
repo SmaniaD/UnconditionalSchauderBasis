@@ -1,5 +1,5 @@
 name = "UnconditionalSchauderBasis"
-version = "v0.1.3"
+version = "0.1.3"
 keywords = ["math"]
 defaultTargets = ["UnconditionalSchauderBasis"]
 
