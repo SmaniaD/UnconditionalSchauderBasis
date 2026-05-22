@@ -16,21 +16,26 @@ open scoped Topology
 A Schauder basis of a Banach space.
 
 The sequence `basis` is a Schauder basis when every vector `x` has a unique
-norm-convergent expansion
-`∑' n, coeff n x • basis n = x`.  The coordinate maps are bundled as
-continuous linear maps, which is the natural Banach-space formulation.
+norm-convergent expansion along the initial partial sums
+`∑ n ∈ Finset.range N, coeff n x • basis n`. The coordinate maps are bundled
+as continuous linear maps, which is the natural Banach-space formulation.
 -/
+def HasSchauderSum {𝕜 E : Type*} [NontriviallyNormedField 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E]
+    (basis : ℕ → E) (a : ℕ → 𝕜) (x : E) : Prop :=
+  Filter.Tendsto (fun N : ℕ => ∑ n ∈ Finset.range N, a n • basis n) atTop (𝓝 x)
+
 structure SchauderBasis (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
   /-- The basis vectors. -/
   basis : ℕ → E
   /-- The continuous coordinate functionals. -/
   coeff : ℕ → E →L[𝕜] 𝕜
-  /-- Every vector is the sum of its basis expansion. -/
-  hasSum_repr : ∀ x : E, HasSum (fun n : ℕ => coeff n x • basis n) x
+  /-- Every vector is the limit of the initial partial sums of its expansion. -/
+  hasSchauderSum_repr : ∀ x : E, HasSchauderSum basis (fun n : ℕ => coeff n x) x
   /-- The coefficients in such an expansion are unique. -/
   unique_coeff :
-    ∀ (x : E) (a : ℕ → 𝕜), HasSum (fun n : ℕ => a n • basis n) x →
+    ∀ (x : E) (a : ℕ → 𝕜), HasSchauderSum basis a x →
       a = fun n : ℕ => coeff n x
 
 namespace SchauderBasis
@@ -43,17 +48,32 @@ def coord (b : SchauderBasis 𝕜 E) (n : ℕ) (x : E) : 𝕜 :=
   b.coeff n x
 
 @[simp]
-theorem hasSum_repr_apply (b : SchauderBasis 𝕜 E) (x : E) :
-    HasSum (fun n : ℕ => b.coeff n x • b.basis n) x :=
-  b.hasSum_repr x
+theorem hasSchauderSum_repr_apply (b : SchauderBasis 𝕜 E) (x : E) :
+    HasSchauderSum b.basis (fun n : ℕ => b.coeff n x) x :=
+  b.hasSchauderSum_repr x
 
 /--
-A Schauder basis is unconditional if every basis expansion converges to the
-same vector after any permutation of its terms.
+A Schauder basis is unconditional if every basis expansion has a `HasSum`.
+
+Since `HasSum` is Lean's unconditional notion of summability, this is
+equivalent to convergence of every permuted expansion; see
+`SchauderBasis.isUnconditional_iff_hasSum_rearranged`.
 -/
 def IsUnconditional (b : SchauderBasis 𝕜 E) : Prop :=
-  ∀ (x : E) (σ : Equiv.Perm ℕ),
-    HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x
+  ∀ x : E, HasSum (fun n : ℕ => b.coeff n x • b.basis n) x
+
+/-- `HasSum` unconditionality is equivalent to convergence after every permutation. -/
+theorem isUnconditional_iff_hasSum_rearranged (b : SchauderBasis 𝕜 E) :
+    b.IsUnconditional ↔
+      ∀ (x : E) (σ : Equiv.Perm ℕ),
+        HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x := by
+  constructor
+  · intro hb x σ
+    let f : ℕ → E := fun n => b.coeff n x • b.basis n
+    have hf : HasSum f x := hb x
+    simpa [f, Function.comp_def] using (σ.hasSum_iff).2 hf
+  · intro hb x
+    simpa using hb x (Equiv.refl ℕ)
 
 end SchauderBasis
 
@@ -69,7 +89,42 @@ structure UnconditionalSchauderBasis (E : Type*) [NormedAddCommGroup E] [NormedS
   /-- Unconditional convergence of every basis expansion. -/
   unconditional : toSchauderBasis.IsUnconditional
 
+/--
+An unconditional Schauder basis indexed by an arbitrary type.
 
+Here `basis i` is the vector `φᵢ`, `coeff i` is the corresponding coordinate
+functional, and every vector has an unconditional expansion over the whole
+index type.
+-/
+structure UnconditionalSchauderBasisAbstractIndex (𝕜 Index E : Type*) [NontriviallyNormedField 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
+  /-- The basis vectors, indexed by an arbitrary type. -/
+  basis : Index → E
+  /-- The continuous coordinate functionals, with the same index type. -/
+  coeff : Index → E →L[𝕜] 𝕜
+  /-- Every vector is the unconditional sum of its abstractly indexed expansion. -/
+  hasSum_repr : ∀ x : E, HasSum (fun i : Index => coeff i x • basis i) x
+  /-- The coefficients in such an unconditional expansion are unique. -/
+  unique_coeff :
+    ∀ (x : E) (a : Index → 𝕜), HasSum (fun i : Index => a i • basis i) x →
+      a = fun i : Index => coeff i x
+
+namespace UnconditionalSchauderBasisAbstractIndex
+
+variable {𝕜 Index E : Type*} [NontriviallyNormedField 𝕜]
+    [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
+
+@[simp]
+theorem hasSum_repr_apply (b : UnconditionalSchauderBasisAbstractIndex 𝕜 Index E) (x : E) :
+    HasSum (fun i : Index => b.coeff i x • b.basis i) x :=
+  b.hasSum_repr x
+
+theorem unique_coeff_apply (b : UnconditionalSchauderBasisAbstractIndex 𝕜 Index E)
+    (x : E) (a : Index → 𝕜) (ha : HasSum (fun i : Index => a i • b.basis i) x) :
+    a = fun i : Index => b.coeff i x :=
+  b.unique_coeff x a ha
+
+end UnconditionalSchauderBasisAbstractIndex
 
 
 namespace UnconditionalSchauderBasis
@@ -88,14 +143,22 @@ def coeff (b : UnconditionalSchauderBasis E) : ℕ → E →L[ℂ] ℂ :=
   b.toSchauderBasis.coeff
 
 @[simp]
+theorem hasSchauderSum_repr_apply (b : UnconditionalSchauderBasis E) (x : E) :
+    HasSchauderSum b.basis (fun n : ℕ => b.coeff n x) x :=
+  b.toSchauderBasis.hasSchauderSum_repr x
+
+@[simp]
 theorem hasSum_repr_apply (b : UnconditionalSchauderBasis E) (x : E) :
     HasSum (fun n : ℕ => b.coeff n x • b.basis n) x :=
-  b.toSchauderBasis.hasSum_repr x
+  b.unconditional x
 
 theorem hasSum_rearranged (b : UnconditionalSchauderBasis E)
     (x : E) (σ : Equiv.Perm ℕ) :
     HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x :=
-  b.unconditional x σ
+  by
+    let f : ℕ → E := fun n => b.coeff n x • b.basis n
+    have hf : HasSum f x := b.unconditional x
+    simpa [f, Function.comp_def] using (σ.hasSum_iff).2 hf
 
 end UnconditionalSchauderBasis
 
@@ -160,16 +223,15 @@ structure SchauderData (E : Type*) [NormedAddCommGroup E]
   basis : ℕ → E
   /-- The continuous coordinate functionals. -/
   coeff : ℕ → E →L[ℂ] ℂ
-  /-- Every vector is the sum of its basis expansion. -/
-  hasSum_repr : ∀ x : E, HasSum (fun n : ℕ => coeff n x • basis n) x
+  /-- Every vector is the limit of the initial partial sums of its expansion. -/
+  hasSchauderSum_repr : ∀ x : E, HasSchauderSum basis (fun n : ℕ => coeff n x) x
   /-- The coefficients in such an expansion are unique. -/
   unique_coeff :
-    ∀ (x : E) (a : ℕ → ℂ), HasSum (fun n : ℕ => a n • basis n) x →
+    ∀ (x : E) (a : ℕ → ℂ), HasSchauderSum basis a x →
       a = fun n : ℕ => coeff n x
-  /-- Every rearranged basis expansion has the same sum. -/
+  /-- Every basis expansion has an unconditional sum. -/
   unconditional :
-    ∀ (x : E) (σ : Equiv.Perm ℕ),
-      HasSum (fun n : ℕ => coeff (σ n) x • basis (σ n)) x
+    ∀ x : E, HasSum (fun n : ℕ => coeff n x • basis n) x
 
 /-- Convert the intermediate package into the structure used in this file. -/
 def SchauderData.toUnconditionalSchauderBasis
@@ -180,7 +242,7 @@ def SchauderData.toUnconditionalSchauderBasis
   {
     basis := d.basis
     coeff := d.coeff
-    hasSum_repr := d.hasSum_repr
+    hasSchauderSum_repr := d.hasSchauderSum_repr
     unique_coeff := d.unique_coeff
   }
   unconditional := d.unconditional
@@ -669,7 +731,33 @@ lemma coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound
           dsimp [δ]
           field_simp [hK1_pos.ne']
 
+/-- The finite sets `Finset.range N` tend to infinity among all finite sets. -/
+lemma tendsto_finset_range_atTop :
+    Filter.Tendsto (fun N : ℕ => Finset.range N) atTop (atTop : Filter (Finset ℕ)) := by
+  rw [Filter.tendsto_atTop]
+  intro s
+  filter_upwards [eventually_ge_atTop (s.sup id + 1)] with N hN
+  intro n hn
+  have hn_le_sup : n ≤ s.sup id := by
+    simpa using (Finset.le_sup (s := s) (f := id) hn)
+  exact Finset.mem_range.mpr (lt_of_le_of_lt hn_le_sup (Nat.lt_of_succ_le hN))
+
 /-- The extended coordinate maps reconstruct every vector as a Schauder sum. -/
+lemma coordMaps_hasSchauderSum_repr_of_finiteProjectionBound
+    (x : ℕ → E)
+    (hx_dense : HasDenseSpan x)
+    (h_li : LinearIndependent ℂ x)
+    (K : ℝ)
+    (h_proj : FiniteProjectionBound x K)
+    (y : E) :
+    HasSchauderSum x
+      (fun n : ℕ => coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj n y)
+      y := by
+  exact
+    coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound x hx_dense h_li K h_proj y
+      |>.comp tendsto_finset_range_atTop
+
+/-- The extended coordinate maps reconstruct every vector unconditionally. -/
 lemma coordMaps_hasSum_repr_of_finiteProjectionBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan x)
@@ -692,34 +780,35 @@ lemma coordMaps_unique_of_finiteProjectionBound
     (K : ℝ)
     (h_proj : FiniteProjectionBound x K) :
     ∀ (y : E) (a : ℕ → ℂ),
-      HasSum (fun n : ℕ => a n • x n) y →
+      HasSchauderSum x a y →
         a = fun n : ℕ =>
           coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj n y := by
   classical
   intro y a ha
   funext n
   let coeff := coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj
-  have hmap : HasSum (fun m : ℕ => coeff n (a m • x m)) (coeff n y) :=
-    ha.mapL (coeff n)
+  have hmap :
+      Filter.Tendsto
+        (fun k : ℕ => coeff n (∑ m ∈ Finset.range k, a m • x m))
+        atTop
+        (𝓝 (coeff n y)) :=
+    (coeff n).continuous.tendsto y |>.comp ha
   have hpartial :
-      ∀ᶠ s : Finset ℕ in atTop,
-        (∑ m ∈ s, coeff n (a m • x m)) = a n := by
-    filter_upwards [eventually_ge_atTop ({n} : Finset ℕ)] with s hs
-    have hns : n ∈ s := hs (by simp)
+      ∀ᶠ k : ℕ in atTop,
+        coeff n (∑ m ∈ Finset.range k, a m • x m) = a n := by
+    filter_upwards [eventually_gt_atTop n] with k hk
     have hcoord :=
       Classical.choose_spec
         (exists_coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj)
-        s a n
-    calc
-      (∑ m ∈ s, coeff n (a m • x m))
-          = coeff n (∑ m ∈ s, a m • x m) := by
-            exact (map_sum (coeff n) (fun m => a m • x m) s).symm
-      _ = a n := by
-            simpa [coeff, hns] using hcoord
-  have hscalar : HasSum (fun m : ℕ => coeff n (a m • x m)) (a n) := by
-    rw [HasSum, SummationFilter.unconditional_filter]
-    exact (tendsto_congr' hpartial).mpr tendsto_const_nhds
-  exact HasSum.unique hscalar hmap
+        (Finset.range k) a n
+    simpa [coeff, Finset.mem_range.mpr hk] using hcoord
+  have hscalar :
+      Filter.Tendsto
+        (fun k : ℕ => coeff n (∑ m ∈ Finset.range k, a m • x m))
+        atTop
+        (𝓝 (a n)) :=
+    (tendsto_congr' hpartial).mpr tendsto_const_nhds
+  exact tendsto_nhds_unique hscalar hmap
 
 /-- The coordinate expansions are unconditional. -/
 lemma coordMaps_unconditional_of_finiteProjectionBound
@@ -751,12 +840,12 @@ noncomputable def schauderData_of_finiteProjectionBound
 {
   basis := x
   coeff := coordMaps_of_finiteProjectionBound x hx_dense h_li K h_proj
-  hasSum_repr :=
-    coordMaps_hasSum_repr_of_finiteProjectionBound x hx_dense h_li K h_proj
+  hasSchauderSum_repr :=
+    coordMaps_hasSchauderSum_repr_of_finiteProjectionBound x hx_dense h_li K h_proj
   unique_coeff :=
     coordMaps_unique_of_finiteProjectionBound x hx_dense h_li K h_proj
   unconditional :=
-    coordMaps_unconditional_of_finiteProjectionBound x hx_dense h_li K h_proj
+    coordMaps_hasSum_repr_of_finiteProjectionBound x hx_dense h_li K h_proj
 }
 
 /--
