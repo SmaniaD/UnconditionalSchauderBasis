@@ -13,18 +13,25 @@ open scoped BigOperators
 open scoped Topology
 
 /-!
-# Schauder bases and finite sign criteria
+# Schauder bases and the finite sign criterion
 
-This file contains two related formalisations.
+This file develops a small API for Schauder bases and proves a finite sign
+criterion for constructing unconditional Schauder bases.
 
-* `SchauderBasis` and `UnconditionalSchauderBasis` are the usual `ℕ`-indexed
+The main ingredients are:
+
+* `SchauderBasis` and `UnconditionalSchauderBasis`, the usual `ℕ`-indexed
   notions. A Schauder expansion is ordered, so its convergence is expressed by
   initial partial sums.
 * `UnconditionalSchauderBasisAbstractIndex` is indexed by an arbitrary type.
   Its expansion uses `HasSum`, which is the unconditional finite-set filter.
+* `UnconditionalCriterion.exists_unconditionalSchauderBasisAbstractIndex_of_finiteSignBound`
+  and `UnconditionalCriterion.exists_unconditionalSchauderBasis_of_finiteSignBound`,
+  which package the construction of an unconditional Schauder basis from a
+  uniform finite sign estimate, dense span, and nonzero vectors.
 
-The final section proves a finite sign criterion first for an arbitrary index
-type and then recovers the `ℕ`-indexed theorem by enumeration with
+The finite sign criterion is first proved for an arbitrary index type. The
+usual `ℕ`-indexed theorem is then recovered by enumeration with
 `Equiv.refl ℕ`.
 -/
 
@@ -48,7 +55,7 @@ def HasSchauderSum {𝕜 E : Type*} [NontriviallyNormedField 𝕜]
   Filter.Tendsto (fun N : ℕ => ∑ n ∈ Finset.range N, a n • basis n) atTop (𝓝 x)
 
 /--
-A Schauder basis for a Banach space.
+A Schauder basis for a complete normed space.
 
 For each vector `x`, the initial partial sums of the coordinate expansion
 converge to `x`, and this expansion is unique. The coordinate maps are stored
@@ -107,10 +114,11 @@ theorem isUnconditional_iff_hasSum_rearranged (b : SchauderBasis 𝕜 E) :
 end SchauderBasis
 
 /--
-An unconditional Schauder basis.
+An unconditional Schauder basis with the usual `ℕ` index set.
 
-This is a Schauder basis together with the statement that every rearranged
-basis expansion still converges to the same vector.
+This is a Schauder basis together with unconditional summability of every basis
+expansion. The equivalence with convergence of every rearranged expansion is
+available as `SchauderBasis.isUnconditional_iff_hasSum_rearranged`.
 -/
 structure UnconditionalSchauderBasis (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where
@@ -131,8 +139,9 @@ subsets, i.e. `HasSum`.
 An unconditional Schauder basis indexed by an arbitrary type.
 
 Here `basis i` is the vector `φᵢ`, `coeff i` is the corresponding coordinate
-functional, and every vector has a unique unconditional expansion over the
-whole index type.
+functional, and every vector has a unique unconditional expansion over the whole
+index type. This abstract version is the natural target for the finite sign
+criterion, where no preferred order on the index set is needed.
 -/
 structure UnconditionalSchauderBasisAbstractIndex (𝕜 Index E : Type*)
     [NontriviallyNormedField 𝕜] [NormedAddCommGroup E] [NormedSpace 𝕜 E]
@@ -225,8 +234,13 @@ uniqueness of ordered coefficients.
 -/
 
 /--
-Enumerating a countably indexed unconditional Schauder basis gives an
-unconditional Schauder basis indexed by `ℕ`.
+Enumerating an abstract unconditional Schauder basis gives a usual
+`ℕ`-indexed unconditional Schauder basis.
+
+The equivalence `e : ℕ ≃ Index` provides the order used for the Schauder
+partial sums. Unconditional summability supplies convergence for that order,
+while uniqueness of abstract coordinates gives uniqueness of the ordered
+coefficients.
 -/
 noncomputable def toUnconditionalSchauderBasis
     (b : UnconditionalSchauderBasisAbstractIndex 𝕜 Index E) (e : ℕ ≃ Index) :
@@ -365,7 +379,14 @@ private theorem hasSum_rearranged (b : UnconditionalSchauderBasis 𝕜 E)
     have hf : HasSum f x := b.unconditional x
     simpa [f, Function.comp_def] using (σ.hasSum_iff).2 hf
 
-/-- An unconditional Schauder basis is an abstractly indexed one with index type `ℕ`. -/
+/--
+Forget the order on an unconditional Schauder basis and regard it as an
+abstractly indexed basis over `ℕ`.
+
+The `HasSum` part of unconditionality becomes the representation theorem for
+the abstract basis, while uniqueness is inherited from the ordered Schauder
+basis by passing a `HasSum` to its ordered partial sums.
+-/
 def toUnconditionalSchauderBasisAbstractIndex (b : UnconditionalSchauderBasis 𝕜 E) :
     UnconditionalSchauderBasisAbstractIndex 𝕜 ℕ E :=
 {
@@ -417,19 +438,20 @@ variable {𝕜 E : Type*} [NontriviallyNormedField 𝕜] [CharZero 𝕜] [Comple
 The closed linear span of `x` is all of `E`.
 
 In infinite-dimensional Banach spaces, this is the right meaning of
-"the vectors `x n` span `E`".
+"the vectors `x i` span `E`".
 -/
 def HasDenseSpan {Index : Type*} (x : Index → E) : Prop :=
   closure ((Submodule.span 𝕜 (Set.range x) : Submodule 𝕜 E) : Set E) = Set.univ
 
 /--
-Finite sign estimate.
+Finite sign estimate for the family `x`.
 
-This is
+This says that changing finitely many coefficients by signs can increase the
+norm of the corresponding finite sum by at most the factor `C`:
 
 `‖∑_{i ∈ s} ε_i a_i x_i‖ ≤ C ‖∑_{i ∈ s} a_i x_i‖`,
 
-with each `ε_i` equal to `1` or `-1`.
+with each `ε_i` equal to `1` or `-1` on the finite set `s`.
 -/
 def HasFiniteSignBound {Index : Type*} (x : Index → E) (C : ℝ) : Prop :=
   ∀ (s : Finset Index) (a ε : Index → 𝕜),
@@ -1002,8 +1024,11 @@ only existence and keep the construction details hidden.
 -/
 
 /--
-Build an abstractly indexed unconditional Schauder basis from the finite sign
-estimate.
+Construct the abstractly indexed unconditional Schauder basis promised by the
+finite sign criterion.
+
+This private definition contains the actual choice of coordinate functionals.
+The public theorem below exposes only the resulting existence statement.
 -/
 private noncomputable def unconditionalSchauderBasisAbstractIndex_of_finiteSignBound
     {Index : Type*}
@@ -1033,12 +1058,13 @@ private noncomputable def unconditionalSchauderBasisAbstractIndex_of_finiteSignB
   }
 
 /--
-Build an unconditional Schauder basis from the finite sign estimate.
+Construct a usual `ℕ`-indexed unconditional Schauder basis from the finite sign
+criterion.
 
 This is only a specialization of the abstract-index construction to
 `Index = ℕ`, followed by the canonical enumeration `Equiv.refl ℕ`.
 -/
-private  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
+private noncomputable def unconditionalSchauderBasis_of_finiteSignBound
     (x : ℕ → E)
     (hx_dense : HasDenseSpan (𝕜 := 𝕜) x)
     (hx_ne : ∀ i, x i ≠ 0)
@@ -1051,9 +1077,11 @@ private  noncomputable def unconditionalSchauderBasis_of_finiteSignBound
   b.toUnconditionalSchauderBasis (Equiv.refl ℕ)
 
 /--
-Abstract-index existence theorem: finite sign bound + dense span + nonzero
-vectors produce an abstractly indexed unconditional Schauder basis whose basis
-family is exactly `x`.
+Abstract-index finite sign criterion.
+
+If `x` has dense closed linear span, no vector `x i` is zero, and finite sign
+changes are uniformly bounded by `C`, then there is an abstractly indexed
+unconditional Schauder basis whose basis family is exactly `x`.
 -/
 theorem exists_unconditionalSchauderBasisAbstractIndex_of_finiteSignBound
     {Index : Type*}
@@ -1070,8 +1098,11 @@ theorem exists_unconditionalSchauderBasisAbstractIndex_of_finiteSignBound
   rfl
 
 /--
-Main existence theorem: finite sign bound + dense span + `x n ≠ 0` produce an
-unconditional Schauder basis whose basis sequence is exactly `x`.
+Main finite sign criterion for sequences.
+
+If `x : ℕ → E` has dense closed linear span, no vector `x n` is zero, and finite
+sign changes are uniformly bounded by `C`, then `x` is the basis sequence of an
+unconditional Schauder basis.
 
 This theorem is kept for the usual `ℕ`-indexed API; internally it is just the
 abstract-index criterion specialized to `ℕ`.
