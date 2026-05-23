@@ -1,0 +1,526 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\geometry{margin=1in}
+\emergencystretch=3em
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}{Remark}[section]
+
+\newcommand{\Nat}{\mathbb{N}}
+\newcommand{\Real}{\mathbb{R}}
+\newcommand{\Complex}{\mathbb{C}}
+\newcommand{\K}{\mathbb{K}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\spanop}{\operatorname{span}}
+\newcommand{\closure}{\operatorname{closure}}
+\newcommand{\HasSum}{\operatorname{HasSum}}
+\newcommand{\Finset}{\operatorname{Finset}}
+\newcommand{\range}{\operatorname{range}}
+\newcommand{\atTop}{\operatorname{atTop}}
+
+\title{\textbf{Unconditional Schauder Bases and Finite Sign Criteria}\\
+  \large Current Lean 4 Formalization}
+\author{Daniel Smania}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document describes the current Lean 4 formalization in this project.  The
+development defines ordered Schauder bases, unconditional Schauder bases indexed
+by $\Nat$, an
+abstract-index version based on Lean's unconditional finite-set summation
+filter, and a finite sign criterion for constructing unconditional Schauder
+bases.  The main public existence theorems are
+listed in Section~\ref{sec:main-theorems}.
+\end{abstract}
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+
+\subsection{Purpose of the Project}
+
+The project formalizes a reusable criterion for producing unconditional
+Schauder bases in complete normed spaces.  It is designed as a small Lean
+library that downstream projects can use once they have proved three
+mathematical facts about a family of vectors:
+
+\begin{enumerate}
+  \item the family has dense closed linear span;
+  \item every vector in the family is nonzero;
+  \item finite signed sums are uniformly bounded by the corresponding unsigned
+    finite sums.
+\end{enumerate}
+
+The criterion is first stated for an arbitrary index type.  This is the most
+natural form in Lean and in applications, because unconditional summability is
+controlled by finite subsets and does not require a preferred order on the
+index set.  The familiar sequence-indexed theorem is then recovered by taking
+the index type to be $\Nat$.
+
+\subsection{Formalized Pipeline}
+
+The current Lean file follows this pipeline:
+
+\begin{enumerate}
+  \item Define the ordered partial-sum convergence used by Schauder bases.
+  \item Bundle $\Nat$-indexed Schauder bases with continuous coordinate maps.
+  \item Define unconditionality using \verb|HasSum|.
+  \item Record three rearrangement formulations: \verb|HasSum| reindexing,
+    finite-set \verb|Filter.Tendsto| convergence, and the classical criterion
+    using ordered partial sums after every permutation of $\Nat$.
+  \item Define abstractly indexed unconditional Schauder bases.
+  \item Prove that abstract coordinates have the expected Kronecker-delta
+    behavior on basis vectors.
+  \item Enumerate an abstract basis by an equivalence $\Nat \simeq I$ to obtain
+    a usual $\Nat$-indexed unconditional Schauder basis.
+  \item Convert a usual unconditional Schauder basis back to the abstract-index
+    API with index type $\Nat$.
+  \item Convert finite sign bounds into finite projection bounds.
+  \item Use the projection bounds to obtain linear independence and continuous
+    coordinate maps.
+  \item Prove unconditional convergence and uniqueness of the constructed
+    expansion.
+  \item Package the construction as public abstract-index and $\Nat$-indexed
+    existence theorems.
+\end{enumerate}
+
+\newpage
+
+\section{Ordered Schauder Bases}
+
+\subsection{Schauder Sums}
+
+\begin{definition}[Ordered Schauder sum]
+In Lean, the ordered convergence used by Schauder bases is named
+\begin{center}
+\verb|HasSchauderSum|.
+\end{center}
+For a scalar field $\K$, a normed space $E$, a sequence of vectors
+$b : \Nat \to E$, coefficients $a : \Nat \to \K$, and a vector $x : E$, it says
+\[
+  \lim_{N\to\infty}
+  \sum_{n\in \Finset.\range(N)} a_n b_n
+  =
+  x.
+\]
+Lean expresses this as a \verb|Filter.Tendsto| statement along \verb|atTop|.
+\end{definition}
+
+\begin{remark}
+This notion is intentionally weaker than \verb|HasSum|.  A Schauder basis is
+ordered: the partial sums are taken over initial segments
+\verb|Finset.range N|.  By contrast, \verb|HasSum| uses the finite-set filter
+and is the appropriate primitive for unconditional summability.
+\end{remark}
+
+\subsection{Bundled Schauder Bases}
+
+\begin{definition}[Schauder basis]
+The Lean structure
+\begin{center}
+\verb|SchauderBasis|
+\end{center}
+contains:
+\begin{enumerate}[label=(\roman*)]
+  \item basis vectors \verb|basis : Nat -> E|;
+  \item continuous coordinate maps \verb|coeff : Nat -> E ->L[K] K|;
+  \item a representation theorem saying every vector is the limit of its
+    ordered coordinate partial sums;
+  \item uniqueness of coefficients for any ordered Schauder expansion.
+\end{enumerate}
+\end{definition}
+
+The coordinate of a vector $x$ at index $n$ is exposed as
+\[
+  \verb|SchauderBasis.coord b n x|.
+\]
+
+\newpage
+
+\section{Unconditional Schauder Bases}
+
+\subsection{Unconditionality}
+
+\begin{definition}[Unconditional Schauder basis]
+For a bundled Schauder basis \verb|b : SchauderBasis K E|, the predicate
+\[
+  \verb|b.IsUnconditional|
+\]
+means that every coordinate expansion is a \verb|HasSum|:
+\[
+  \HasSum\left(n\mapsto b.\operatorname{coeff}_n(x)\,b_n\right)(x)
+  \quad\text{for every }x\in E.
+\]
+\end{definition}
+
+\begin{theorem}[\texorpdfstring{\texttt{HasSum}}{HasSum} reindexing]
+The theorem
+\begin{center}
+\verb|SchauderBasis.isUnconditional_iff_hasSum_rearranged|
+\end{center}
+states that \verb|HasSum|-based unconditionality is invariant under every
+permutation:
+\[
+  \HasSum\left(
+    n\mapsto b.\operatorname{coeff}_{\sigma(n)}(x)\,b_{\sigma(n)}
+  \right)(x)
+\]
+for every permutation $\sigma$ of $\Nat$.
+\end{theorem}
+
+\begin{theorem}[Finite-set rearranged convergence]
+The theorem
+\begin{center}
+\verb|SchauderBasis.isUnconditional_iff_tendsto_rearranged|
+\end{center}
+is the same unconditionality statement with the abbreviation
+\verb|HasSum| unfolded.  It says that \verb|b.IsUnconditional| is equivalent to
+\[
+  \lim_{s\to\infty}
+  \sum_{n\in s}
+    b.\operatorname{coeff}_{\sigma(n)}(x)b_{\sigma(n)}
+  =
+  x,
+\]
+where $s$ ranges over finite subsets of $\Nat$ along the finite-set
+\verb|atTop| filter.
+\end{theorem}
+
+\begin{theorem}[Ordered rearranged convergence]
+The one-way theorem
+\begin{center}
+\verb|SchauderBasis.isUnconditional_tendsto_rearranged|
+\end{center}
+states that unconditionality implies convergence of every permuted ordered
+expansion.  This is often the most convenient forward-use form of the
+classical rearrangement statement.
+\end{theorem}
+
+\begin{theorem}[Ordered rearrangement criterion]
+The theorem
+\begin{center}
+\verb|SchauderBasis.isUnconditional_iff_tendsto_ordered_rearranged|
+\end{center}
+states the classical ordered partial-sum criterion:
+\verb|b.IsUnconditional| is equivalent to
+\[
+  \lim_{N\to\infty}
+  \sum_{n\in\Finset.\range(N)}
+    b.\operatorname{coeff}_{\sigma(n)}(x)b_{\sigma(n)}
+  =
+  x
+\]
+for every vector $x$ and every permutation $\sigma$ of $\Nat$.  This is the
+direct formal version of the usual statement that every rearranged Schauder
+expansion converges to the same vector.
+\end{theorem}
+
+\begin{definition}[Bundled unconditional Schauder basis]
+The Lean structure
+\begin{center}
+\verb|UnconditionalSchauderBasis|
+\end{center}
+bundles a \verb|SchauderBasis| together with the unconditionality predicate
+above.  It also provides convenient projections
+\verb|UnconditionalSchauderBasis.basis| and
+\verb|UnconditionalSchauderBasis.coeff|.
+\end{definition}
+
+\newpage
+
+\section{Abstractly Indexed Bases}
+
+\subsection{Motivation}
+
+Many applications naturally produce a family indexed by a type that is not
+literally $\Nat$.  For such a family there is no canonical order of partial
+sums.  The right primitive is therefore unconditional convergence over finite
+subsets, expressed in Lean by \verb|HasSum|.
+
+\begin{definition}[Abstract-index unconditional Schauder basis]
+The structure
+\begin{center}
+\verb|UnconditionalSchauderBasisAbstractIndex|
+\end{center}
+is indexed by an arbitrary type $I$.  It contains:
+\begin{enumerate}[label=(\roman*)]
+  \item basis vectors \verb|basis : I -> E|;
+  \item continuous coordinate maps \verb|coeff : I -> E ->L[K] K|;
+  \item a \verb|HasSum| representation theorem for every vector;
+  \item uniqueness of coefficients for every unconditional expansion.
+\end{enumerate}
+\end{definition}
+
+\subsection{Coordinates of Basis Vectors}
+
+From uniqueness of unconditional expansions, the file proves the standard
+Kronecker-delta behavior.
+
+\begin{lemma}[Self coordinate]
+For an abstract-index unconditional Schauder basis $b$,
+\[
+  b.\operatorname{coeff}_i(b.\operatorname{basis}_i)=1.
+\]
+The Lean theorem is \verb|coeff_basis_self|.
+\end{lemma}
+
+\begin{lemma}[Off-diagonal coordinate]
+If $j\neq i$, then
+\[
+  b.\operatorname{coeff}_i(b.\operatorname{basis}_j)=0.
+\]
+The Lean theorem is \verb|coeff_basis_ne|.
+\end{lemma}
+
+\subsection{Enumeration}
+
+\begin{theorem}[Enumerating an abstract basis]
+Given an abstract-index unconditional Schauder basis indexed by $I$ and an
+equivalence $e : \Nat \simeq I$, Lean constructs a usual $\Nat$-indexed
+unconditional Schauder basis:
+\begin{center}
+\verb|UnconditionalSchauderBasisAbstractIndex.toUnconditionalSchauderBasis|.
+\end{center}
+The resulting sequence has basis vectors $n\mapsto b.\operatorname{basis}(e n)$
+and coordinate maps $n\mapsto b.\operatorname{coeff}(e n)$.
+\end{theorem}
+
+The file also proves that this enumeration does not change the set of basis
+vectors or the set of coordinate maps:
+\[
+\begin{aligned}
+  &\verb|range_basis_toUnconditionalSchauderBasis|,\\
+  &\verb|range_coeff_toUnconditionalSchauderBasis|.
+\end{aligned}
+\]
+
+\subsection{Forgetting the Order}
+
+Conversely, every usual unconditional Schauder basis gives an abstractly
+indexed one over $\Nat$:
+\begin{center}
+\verb|UnconditionalSchauderBasis.toUnconditionalSchauderBasisAbstractIndex|.
+\end{center}
+The existence theorem
+\[
+  \verb|exists_unconditionalSchauderBasisAbstractIndex_nat|
+\]
+records that the basis vectors and coordinate maps are unchanged.
+
+\newpage
+
+\section{Finite Sign Criterion}
+
+\subsection{Dense Span}
+
+\begin{definition}[Dense closed span]
+For a family $x : I \to E$, the predicate
+\begin{center}
+\verb|UnconditionalCriterion.HasDenseSpan x|
+\end{center}
+means
+\[
+  \closure\bigl(\spanop_{\K}\{x_i : i\in I\}\bigr)=E.
+\]
+In Lean this is expressed as equality with \verb|Set.univ| after coercing the
+span to a set.
+\end{definition}
+
+\subsection{Finite Sign Bound}
+
+\begin{definition}[Finite sign estimate]
+For a family $x : I\to E$ and a constant $C\in\Real$, the predicate
+\begin{center}
+\verb|UnconditionalCriterion.HasFiniteSignBound x C|
+\end{center}
+says that for every finite set $s\subset I$, every coefficient function
+$a : I\to\K$, and every sign function $\varepsilon : I\to\K$ with
+$\varepsilon_i=1$ or $\varepsilon_i=-1$ on $s$,
+\[
+  \norm{\sum_{i\in s}(\varepsilon_i a_i)x_i}
+  \le
+  C\,\norm{\sum_{i\in s}a_i x_i}.
+\]
+\end{definition}
+
+\begin{remark}
+The scalar field assumptions in the criterion are those in the Lean file:
+\verb|NontriviallyNormedField K|, \verb|CharZero K|, and
+\verb|CompleteSpace K|, together with a complete normed space $E$ over $K$.
+The characteristic-zero assumption is used for the signs and the projection
+argument involving the scalar $2$.
+\end{remark}
+
+\newpage
+
+\section{Proof Strategy}
+
+\subsection{From Signs to Projections}
+
+The first step converts finite sign estimates into uniform bounds for finite
+coordinate projections.  Given finite sets $t\subseteq s$, choose signs
+\[
+  \varepsilon_i =
+  \begin{cases}
+    1, & i\in t,\\
+    -1, & i\notin t.
+  \end{cases}
+\]
+The algebraic identity
+\[
+  \sum_{i\in s}(\varepsilon_i a_i)x_i
+  =
+  2\sum_{i\in t}a_i x_i
+  -
+  \sum_{i\in s}a_i x_i
+\]
+leads to the projection estimate
+\[
+  \norm{\sum_{i\in t}a_i x_i}
+  \le
+  \norm{2^{-1}}\,(C+1)\,
+  \norm{\sum_{i\in s}a_i x_i}.
+\]
+The Lean predicate for this intermediate statement is private and named
+\begin{center}
+{\small\verb|FiniteProjectionBound|}
+\end{center}
+
+\subsection{Linear Independence and Coordinate Maps}
+
+The projection bound implies linear independence of the family $x$, provided
+each $x_i$ is nonzero.  This is the lemma
+\begin{center}
+\verb|linearIndependent_of_finiteProjectionBound|.
+\end{center}
+
+Once linear independence is available, the proof defines algebraic coordinate
+maps on the span of the family.  The projection bound gives the norm control
+needed to extend those maps continuously from the dense span to all of $E$.
+This step is packaged in
+\begin{center}
+\verb|exists_coordMaps_of_finiteProjectionBound|.
+\end{center}
+
+\subsection{Convergence}
+
+Let $P_s$ be the finite partial-sum projection associated to a finite set
+$s\subset I$:
+\[
+  P_s(y)=\sum_{i\in s}\operatorname{coeff}_i(y)x_i.
+\]
+On algebraic finite linear combinations, $P_s$ is eventually exact once $s$
+contains the support of the combination.  The uniform projection bound then
+extends convergence from the dense algebraic span to every vector in $E$.
+
+Lean proves this analytic core as
+\begin{center}
+\verb|coordMaps_tendsto_finite_partial_sums_of_finiteProjectionBound|.
+\end{center}
+It then repackages the statement as a \verb|HasSum| representation theorem.
+
+\subsection{Uniqueness}
+
+Uniqueness of coefficients follows by applying the constructed coordinate
+functionals to an arbitrary unconditional expansion.  Once the finite set
+contains the chosen index $i$, the $i$th coordinate of the finite partial sum
+is exactly the coefficient $a_i$.  Passing to the \verb|HasSum| limit identifies
+$a_i$ with the constructed coordinate of the sum.
+
+\newpage
+
+\section{Main Theorems}
+\label{sec:main-theorems}
+
+\subsection{Abstract-Index Criterion}
+
+\begin{theorem}[Abstract-index finite sign criterion]
+Assume $x : I\to E$ has dense closed linear span, every $x_i$ is nonzero, and
+$x$ satisfies a finite sign bound with constant $C\ge 0$.  Then there exists an
+abstractly indexed unconditional Schauder basis whose basis family is exactly
+$x$.
+
+The Lean theorem is
+\begin{center}
+{\scriptsize\ttfamily
+UnconditionalCriterion.\\
+exists\_unconditionalSchauderBasisAbstractIndex\_of\_finiteSignBound}
+\end{center}
+\end{theorem}
+
+\subsection{\texorpdfstring{$\Nat$}{Nat}-Indexed Criterion}
+
+\begin{theorem}[Sequence-index finite sign criterion]
+Assume $x : \Nat\to E$ has dense closed linear span, every $x_n$ is nonzero,
+and $x$ satisfies a finite sign bound with constant $C\ge 0$.  Then there
+exists a usual unconditional Schauder basis whose basis sequence is exactly
+$x$.
+
+The Lean theorem is
+\begin{center}
+{\scriptsize\ttfamily
+UnconditionalCriterion.\\
+exists\_unconditionalSchauderBasis\_of\_finiteSignBound}
+\end{center}
+\end{theorem}
+
+The sequence-index theorem is obtained from the abstract-index theorem by
+specializing the index type to $\Nat$ and using the canonical equivalence
+\verb|Equiv.refl Nat|.
+
+\newpage
+
+\section{File Guide}
+
+The project currently has one main Lean file:
+
+\begin{itemize}
+  \item \verb|UnconditionalSchauderBasis.lean|:
+    ordered Schauder sums, bundled Schauder bases, unconditional
+    Schauder bases, abstract-index unconditional bases, conversions between
+    the two APIs, and the complete finite sign criterion.
+\end{itemize}
+
+The repository also contains:
+
+\begin{itemize}
+  \item \verb|README.md|:
+    short project overview and build instructions;
+  \item \verb|docpdf/Documentation.tex| and
+    \verb|docpdf/Documentation.pdf|:
+    narrative PDF documentation for the current formalization;
+  \item \verb|lakefile.toml|:
+    Lake package configuration;
+  \item \verb|lean-toolchain|:
+    Lean toolchain pin;
+  \item \verb|lake-manifest.json|:
+    resolved dependency manifest.
+\end{itemize}
+
+\section{Conclusion}
+
+The current formalization provides a compact, reusable bridge from finite sign
+estimates to unconditional Schauder bases.  The abstract-index theorem is the
+preferred general API for downstream work, while the $\Nat$-indexed theorem
+keeps the familiar sequence-based Schauder-basis interface available when an
+ordered basis is wanted.
+
+\end{document}

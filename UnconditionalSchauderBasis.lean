@@ -89,16 +89,231 @@ private theorem hasSchauderSum_repr_apply (b : SchauderBasis 𝕜 E) (x : E) :
   b.hasSchauderSum_repr x
 
 /--
+Combinatorial enumeration of a strictly increasing exhaustion by finite sets.
+
+If `A 0 = ∅`, `A n` is strictly increasing, and the union of the `A n` is all
+of `ℕ`, then one can enumerate the naturals block by block so that the initial
+segments of the enumeration are exactly the sets `A n`.  The intended
+checkpoints are `k n = (A n).card`.
+-/
+private theorem exists_perm_subseq_range_image_of_monotone_finset
+    (A : ℕ → Finset ℕ)
+    (hA_zero : A 0 = ∅)
+    (hA_mono : Monotone A)
+    (hA_strict : ∀ n : ℕ, A n ⊂ A (n + 1))
+    (hA_cover : ∀ m : ℕ, ∃ n : ℕ, m ∈ A n) :
+    ∃ σ : Equiv.Perm ℕ,
+      ∀ n : ℕ, (Finset.range (A n).card).image (fun i : ℕ => σ i) = A n := by
+  classical
+  let block : ℕ → List ℕ := fun n => (A (n + 1) \ A n).sort (· ≤ ·)
+  let L : ℕ → List ℕ := Nat.rec [] fun n l => l ++ block n
+  have hL_succ (n : ℕ) : L (n + 1) = L n ++ block n := by
+    simp [L]
+  have hL_prefix_succ (n : ℕ) : L n <+: L (n + 1) := by
+    rw [hL_succ n]
+    exact (L n).prefix_append (block n)
+  have hL_prefix : ∀ {n m : ℕ}, n ≤ m → L n <+: L m := by
+    intro n m hnm
+    induction hnm with
+    | refl => rfl
+    | step hnm ih => exact ih.trans (hL_prefix_succ _)
+  have hL_toFinset : ∀ n : ℕ, (L n).toFinset = A n := by
+    intro n
+    induction n with
+    | zero =>
+        simp [L, hA_zero]
+    | succ n ih =>
+        rw [hL_succ n, List.toFinset_append, ih]
+        simp [block, Finset.sort_toFinset, Finset.union_sdiff_of_subset (hA_mono (Nat.le_succ n))]
+  have hL_nodup : ∀ n : ℕ, (L n).Nodup := by
+    intro n
+    induction n with
+    | zero =>
+        simp [L]
+    | succ n ih =>
+        rw [hL_succ n]
+        refine ih.append ((A (n + 1) \ A n).sort_nodup (· ≤ ·)) ?_
+        intro x hxL hxB
+        have hxA : x ∈ A n := by
+          simpa [← hL_toFinset n, List.mem_toFinset] using hxL
+        have hxD : x ∈ A (n + 1) \ A n := by
+          simpa [block, Finset.mem_sort] using hxB
+        exact (Finset.mem_sdiff.mp hxD).2 hxA
+  have hL_length (n : ℕ) : (L n).length = (A n).card := by
+    simpa [hL_toFinset n] using (List.toFinset_card_of_nodup (hL_nodup n)).symm
+  have hA_card_ge : ∀ n : ℕ, n ≤ (A n).card := by
+    intro n
+    induction n with
+    | zero => simp [hA_zero]
+    | succ n ih =>
+        have hcard_lt : (A n).card < (A (n + 1)).card :=
+          Finset.card_lt_card (hA_strict n)
+        exact Nat.succ_le_of_lt (lt_of_le_of_lt ih hcard_lt)
+  let σFun : ℕ → ℕ := fun i =>
+    (L (i + 1)).get ⟨i, by
+      rw [hL_length (i + 1)]
+      exact (Nat.lt_succ_self i).trans_le (hA_card_ge (i + 1))⟩
+  have hσFun_eq_get (n i : ℕ) (hi : i < (L n).length) :
+      σFun i = (L n).get ⟨i, hi⟩ := by
+    have hiσ : i < (L (i + 1)).length := by
+      rw [hL_length (i + 1)]
+      exact (Nat.lt_succ_self i).trans_le (hA_card_ge (i + 1))
+    unfold σFun
+    rcases le_total (i + 1) n with hin | hni
+    · exact List.IsPrefix.getElem (hL_prefix hin) hiσ
+    · exact (List.IsPrefix.getElem (hL_prefix hni) hi).symm
+  have hσFun_inj : Function.Injective σFun := by
+    intro i j hij
+    let n := max (i + 1) (j + 1)
+    have hiL : i < (L n).length := by
+      rw [hL_length]
+      exact (Nat.lt_succ_self i).trans_le
+        ((Nat.le_max_left (i + 1) (j + 1)).trans (hA_card_ge n))
+    have hjL : j < (L n).length := by
+      rw [hL_length]
+      exact (Nat.lt_succ_self j).trans_le
+        ((Nat.le_max_right (i + 1) (j + 1)).trans (hA_card_ge n))
+    have hget :
+        (L n).get ⟨i, hiL⟩ = (L n).get ⟨j, hjL⟩ := by
+      rw [← hσFun_eq_get n i hiL, ← hσFun_eq_get n j hjL, hij]
+    exact congr_arg Fin.val ((hL_nodup n).injective_get hget)
+  have hσFun_surj : Function.Surjective σFun := by
+    intro x
+    obtain ⟨n, hxA⟩ := hA_cover x
+    have hxL : x ∈ L n := by
+      simpa [← hL_toFinset n, List.mem_toFinset] using hxA
+    obtain ⟨i, hix⟩ := List.mem_iff_get.mp hxL
+    refine ⟨i, ?_⟩
+    rw [hσFun_eq_get n i i.2, hix]
+  let σ : Equiv.Perm ℕ := Equiv.ofBijective σFun ⟨hσFun_inj, hσFun_surj⟩
+  refine ⟨σ, ?_⟩
+  intro n
+  ext x
+  constructor
+  · intro hx
+    rw [Finset.mem_image] at hx
+    obtain ⟨i, hi, hix⟩ := hx
+    have hiL : i < (L n).length := by
+      simpa [hL_length n] using hi
+    have hxL : x ∈ L n := by
+      rw [← hix]
+      change σFun i ∈ L n
+      rw [hσFun_eq_get n i hiL]
+      exact List.get_mem _ _
+    simpa [← hL_toFinset n, List.mem_toFinset] using hxL
+  · intro hxA
+    have hxL : x ∈ L n := by
+      simpa [← hL_toFinset n, List.mem_toFinset] using hxA
+    obtain ⟨i, hix⟩ := List.mem_iff_get.mp hxL
+    rw [Finset.mem_image]
+    refine ⟨i, ?_, ?_⟩
+    · simpa [hL_length n] using i.2
+    · change σFun i = x
+      rw [hσFun_eq_get n i i.2, hix]
+
+/--
+Classical rearrangement criterion for unconditional summability of a sequence.
+
+If every permutation has ordered initial partial sums tending to the same
+limit, then the sequence is unconditionally summable with that limit.
+-/
+private theorem hasSum_of_forall_tendsto_sum_nat_rearranged
+    {f : ℕ → E} {a : E}
+    (h : ∀ σ : Equiv.Perm ℕ,
+      Filter.Tendsto
+        (fun N : ℕ => ∑ n ∈ Finset.range N, f (σ n))
+        atTop
+        (𝓝 a)) :
+    HasSum f a := by
+  classical
+  by_contra hsum
+  rw [HasSum, SummationFilter.unconditional_filter, Metric.tendsto_atTop] at hsum
+  push Not at hsum
+  obtain ⟨ε, hε_pos, hε⟩ := hsum
+  choose bad hbad_sub hbad_dist using hε
+  let A : ℕ → Finset ℕ :=
+    Nat.rec ∅ fun n s => bad ((s ∪ Finset.range (n + 1)) ∪ {s.sup id + 1})
+  have hA_zero : A 0 = ∅ := by
+    simp [A]
+  have hA_succ (n : ℕ) :
+      A (n + 1) =
+        bad (((A n ∪ Finset.range (n + 1)) ∪ {(A n).sup id + 1})) := by
+    simp [A]
+  have hA_step (n : ℕ) : A n ⊆ A (n + 1) := by
+    rw [hA_succ n]
+    exact (Finset.subset_union_left.trans Finset.subset_union_left).trans (hbad_sub _)
+  have hA_mono : Monotone A := monotone_nat_of_le_succ hA_step
+  have hA_range (n : ℕ) : Finset.range (n + 1) ⊆ A (n + 1) := by
+    rw [hA_succ n]
+    exact (Finset.subset_union_right.trans Finset.subset_union_left).trans (hbad_sub _)
+  have hA_fresh_not (n : ℕ) : (A n).sup id + 1 ∉ A n := by
+    intro hx
+    have hle : (A n).sup id + 1 ≤ (A n).sup id := by
+      simpa using (Finset.le_sup (s := A n) (f := id) hx)
+    exact Nat.not_succ_le_self _ hle
+  have hA_fresh_mem (n : ℕ) : (A n).sup id + 1 ∈ A (n + 1) := by
+    rw [hA_succ n]
+    exact hbad_sub _ (by simp)
+  have hA_strict (n : ℕ) : A n ⊂ A (n + 1) := by
+    rw [Finset.ssubset_iff_of_subset (hA_step n)]
+    exact ⟨(A n).sup id + 1, hA_fresh_mem n, hA_fresh_not n⟩
+  have hA_cover : ∀ m : ℕ, ∃ n : ℕ, m ∈ A n := by
+    intro m
+    exact ⟨m + 1, hA_range m (by simp)⟩
+  have hA_bad (n : ℕ) :
+      ε ≤ dist (∑ m ∈ A (n + 1), f m) a := by
+    rw [hA_succ n]
+    exact hbad_dist ((A n ∪ Finset.range (n + 1)) ∪ {(A n).sup id + 1})
+  obtain ⟨σ, hAσ⟩ :=
+    exists_perm_subseq_range_image_of_monotone_finset A hA_zero hA_mono hA_strict hA_cover
+  have hA_card_ge : ∀ n : ℕ, n ≤ (A n).card := by
+    intro n
+    induction n with
+    | zero => simp [hA_zero]
+    | succ n ih =>
+        have hcard_lt : (A n).card < (A (n + 1)).card :=
+          Finset.card_lt_card (hA_strict n)
+        exact Nat.succ_le_of_lt (lt_of_le_of_lt ih hcard_lt)
+  have hA_card_tendsto : Filter.Tendsto (fun n : ℕ => (A n).card) atTop atTop :=
+    tendsto_atTop_atTop.mpr fun N =>
+      ⟨N, fun n hn => hn.trans (hA_card_ge n)⟩
+  have hσ : Filter.Tendsto
+      (fun n : ℕ => ∑ m ∈ Finset.range (A n).card, f (σ m))
+      atTop
+      (𝓝 a) :=
+    (h σ).comp hA_card_tendsto
+  have hσ_bad (n : ℕ) :
+      ε ≤ dist (∑ m ∈ Finset.range (A (n + 1)).card, f (σ m)) a := by
+    have hsum_eq :
+        (∑ m ∈ A (n + 1), f m) =
+          ∑ m ∈ Finset.range (A (n + 1)).card, f (σ m) := by
+      conv_lhs => rw [← hAσ (n + 1)]
+      simp [Finset.sum_image]
+    simpa [hsum_eq] using hA_bad n
+  have hσ_lt : ∀ᶠ n : ℕ in atTop,
+      dist (∑ m ∈ Finset.range (A n).card, f (σ m)) a < ε :=
+    (Metric.tendsto_nhds.mp hσ) ε hε_pos
+  rw [eventually_atTop] at hσ_lt
+  obtain ⟨N, hN⟩ := hσ_lt
+  exact not_lt_of_ge (hσ_bad N) (hN (N + 1) (Nat.le_succ N))
+
+/--
 A Schauder basis is unconditional if every basis expansion has a `HasSum`.
 
-Since `HasSum` is Lean's unconditional notion of summability, this is
-equivalent to convergence of every permuted expansion; see
-`SchauderBasis.isUnconditional_iff_hasSum_rearranged`.
+Since `HasSum` is Lean's unconditional finite-set notion of summability, this
+immediately implies ordered convergence of every permuted expansion; see
+`SchauderBasis.isUnconditional_tendsto_rearranged`.
 -/
 def IsUnconditional (b : SchauderBasis 𝕜 E) : Prop :=
   ∀ x : E, HasSum (fun n : ℕ => b.coeff n x • b.basis n) x
 
-/-- `HasSum` unconditionality is equivalent to convergence after every permutation. -/
+/--
+`HasSum` unconditionality is invariant under every permutation of `ℕ`.
+
+This is a useful technical form of unconditionality, but it is still phrased in
+terms of `HasSum`, so it is mostly a reindexing statement.  For the ordered
+partial-sum formulation, see `SchauderBasis.isUnconditional_tendsto_rearranged`.
+-/
 theorem isUnconditional_iff_hasSum_rearranged (b : SchauderBasis 𝕜 E) :
     b.IsUnconditional ↔
       ∀ (x : E) (σ : Equiv.Perm ℕ),
@@ -111,14 +326,89 @@ theorem isUnconditional_iff_hasSum_rearranged (b : SchauderBasis 𝕜 E) :
   · intro hb x
     simpa using hb x (Equiv.refl ℕ)
 
+/--
+Unconditionality is equivalent to strong convergence of all rearranged finite
+partial-sum nets.
+
+This is the same mathematical content as
+`SchauderBasis.isUnconditional_iff_hasSum_rearranged`, but it exposes the
+underlying `Filter.Tendsto` statement instead of the abbreviation `HasSum`.
+The filter is `atTop` on `Finset ℕ`, so finite sets eventually contain any
+prescribed finite set of indices.
+-/
+theorem isUnconditional_iff_tendsto_rearranged (b : SchauderBasis 𝕜 E) :
+    b.IsUnconditional ↔
+      ∀ (x : E) (σ : Equiv.Perm ℕ),
+        Filter.Tendsto
+          (fun s : Finset ℕ =>
+            ∑ n ∈ s, b.coeff (σ n) x • b.basis (σ n))
+          atTop
+          (𝓝 x) := by
+  constructor
+  · intro hb x σ
+    have hf : HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x :=
+      (b.isUnconditional_iff_hasSum_rearranged.mp hb) x σ
+    simpa [HasSum, SummationFilter.unconditional_filter] using hf
+  · intro h x
+    have hx := h x (Equiv.refl ℕ)
+    simpa [HasSum, SummationFilter.unconditional_filter] using hx
+
+/--
+Unconditionality implies convergence of every permuted ordered expansion.
+
+For every vector `x` and permutation `σ`, the initial partial sums
+`∑ n ∈ Finset.range N, coeff (σ n) x • basis (σ n)` tend to `x` in the norm
+topology.  This is the direct Lean version of the usual statement that every
+rearrangement of the Schauder expansion converges to the same vector.
+-/
+theorem isUnconditional_tendsto_rearranged (b : SchauderBasis 𝕜 E) :
+    b.IsUnconditional →
+      ∀ (x : E) (σ : Equiv.Perm ℕ),
+        Filter.Tendsto
+          (fun N : ℕ =>
+            ∑ n ∈ Finset.range N, b.coeff (σ n) x • b.basis (σ n))
+          atTop
+          (𝓝 x) := by
+  intro hb x σ
+  let f : ℕ → E := fun n => b.coeff n x • b.basis n
+  have hf : HasSum (fun n : ℕ => b.coeff (σ n) x • b.basis (σ n)) x := by
+    simpa [f, Function.comp_def] using (σ.hasSum_iff).2 (hb x)
+  exact hf.tendsto_sum_nat
+
+/--
+Unconditionality is equivalent to ordered convergence of every rearranged
+expansion.
+
+This is the classical rearrangement formulation: for every vector `x` and every
+permutation `σ : Equiv.Perm ℕ`, the initial partial sums over `Finset.range N`
+of the permuted expansion converge to `x`.
+-/
+theorem isUnconditional_iff_tendsto_ordered_rearranged (b : SchauderBasis 𝕜 E) :
+    b.IsUnconditional ↔
+      ∀ (x : E) (σ : Equiv.Perm ℕ),
+        Filter.Tendsto
+          (fun N : ℕ =>
+            ∑ n ∈ Finset.range N, b.coeff (σ n) x • b.basis (σ n))
+          atTop
+          (𝓝 x) := by
+  constructor
+  · exact b.isUnconditional_tendsto_rearranged
+  · intro h x
+    let f : ℕ → E := fun n => b.coeff n x • b.basis n
+    have hf : HasSum f x :=
+      hasSum_of_forall_tendsto_sum_nat_rearranged (a := x) (f := f) (by
+        intro σ
+        simpa [f] using h x σ)
+    simpa [f] using hf
+
 end SchauderBasis
 
 /--
 An unconditional Schauder basis with the usual `ℕ` index set.
 
 This is a Schauder basis together with unconditional summability of every basis
-expansion. The equivalence with convergence of every rearranged expansion is
-available as `SchauderBasis.isUnconditional_iff_hasSum_rearranged`.
+expansion. The classical ordered rearrangement criterion is available as
+`SchauderBasis.isUnconditional_iff_tendsto_ordered_rearranged`.
 -/
 structure UnconditionalSchauderBasis (𝕜 E : Type*) [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E] where

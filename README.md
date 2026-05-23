@@ -1,5 +1,7 @@
 # UnconditionalSchauderBasis
 
+[Read the PDF documentation](docpdf/Documentation.pdf)
+
 A Lean 4/mathlib project formalizing Schauder bases, unconditional Schauder
 bases, and a finite sign criterion for constructing unconditional Schauder
 bases in complete normed spaces.
@@ -16,8 +18,13 @@ contains:
   coordinate maps and unique ordered coordinate expansions.
 - `UnconditionalSchauderBasis`: a Schauder basis whose coordinate expansion is
   unconditionally summable.
+- Rearrangement criteria for `SchauderBasis.IsUnconditional`, including
+  `HasSum` reindexing, finite-set `Filter.Tendsto` convergence, and the
+  classical ordered convergence criterion for every permutation of `ℕ`.
 - `UnconditionalSchauderBasisAbstractIndex`: an arbitrary-index version using
   `HasSum`, the finite-set filter for unconditional summability.
+- Kronecker-delta coordinate lemmas for abstract-index bases:
+  `coeff_basis_self` and `coeff_basis_ne`.
 - Conversion lemmas between the abstract-index API and the usual `ℕ`-indexed
   API when an enumeration is available.
 - `UnconditionalCriterion.HasDenseSpan` and
@@ -54,6 +61,8 @@ lake env lean UnconditionalSchauderBasis.lean
 - `lake-manifest.json`: resolved dependency manifest.
 - `UnconditionalSchauderBasis.lean`: main formalization file and library entry
   point.
+- `docpdf/Documentation.tex` and `docpdf/Documentation.pdf`: narrative PDF
+  documentation for the formalization.
 
 ## Next Work
 
