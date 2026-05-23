@@ -23,6 +23,9 @@ The main ingredients are:
 * `SchauderBasis` and `UnconditionalSchauderBasis`, the usual `ℕ`-indexed
   notions. A Schauder expansion is ordered, so its convergence is expressed by
   initial partial sums.
+* Rearrangement criteria for `SchauderBasis.IsUnconditional`, including
+  `HasSum` reindexing, convergence over the finite-set filter, and the
+  classical ordered partial-sum criterion for every permutation of `ℕ`.
 * `UnconditionalSchauderBasisAbstractIndex` is indexed by an arbitrary type.
   Its expansion uses `HasSum`, which is the unconditional finite-set filter.
 * `UnconditionalCriterion.exists_unconditionalSchauderBasisAbstractIndex_of_finiteSignBound`
@@ -452,11 +455,13 @@ namespace UnconditionalSchauderBasisAbstractIndex
 variable {𝕜 Index E : Type*} [NontriviallyNormedField 𝕜]
     [NormedAddCommGroup E] [NormedSpace 𝕜 E] [CompleteSpace E]
 
+/-- The representation theorem of an abstract unconditional Schauder basis, as a simp lemma. -/
 @[simp]
 theorem hasSum_repr_apply (b : UnconditionalSchauderBasisAbstractIndex 𝕜 Index E) (x : E) :
     HasSum (fun i : Index => b.coeff i x • b.basis i) x :=
   b.hasSum_repr x
 
+/-- Coefficients in an abstract unconditional expansion are the stored coordinate maps. -/
 theorem unique_coeff_apply (b : UnconditionalSchauderBasisAbstractIndex 𝕜 Index E)
     (x : E) (a : Index → 𝕜) (ha : HasSum (fun i : Index => a i • b.basis i) x) :
     a = fun i : Index => b.coeff i x :=
